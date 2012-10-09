@@ -14,6 +14,8 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFrame;
@@ -24,6 +26,8 @@ import javax.swing.JPanel;
  * @author karl
  */
 public class StaticImageDemo1 {
+
+    float zDepth = -500;
 
     public StaticImageDemo1() {
         JFrame frame = new JFrame("Static Image Demo 1");
@@ -45,21 +49,23 @@ public class StaticImageDemo1 {
                 new Vector3D(5, -35, 0),
                 new Vector3D(-5, -35, 0));
         trunk.setColor(Color.RED);
+        
+        
 
-        final Transform3D transform1 = new Transform3D(0, 0, -500);
-        final Transform3D transform2 = new Transform3D(0, 0, -500);
+
+        final Transform3D transform1 = new Transform3D(0, 0, zDepth);
+        final Transform3D transform2 = new Transform3D(0, 0, zDepth);
         transform2.setAngleY((float) Math.toRadians(90));
 
         final PolygonRenderer polyRenderer = new PolygonRenderer(view);
 
         polyRenderer.enableVertexShader();
 
-        final TransformShader transformShader = new TransformShader() {
-        };
+        final TransformShader transformShader = new TransformShader();
 
         polyRenderer.setVertexShader(transformShader);
 
-        polyRenderer.enableWireframe();
+        //polyRenderer.enableWireframe();
 
         final JPanel panel = new JPanel() {
             @Override
@@ -95,9 +101,12 @@ public class StaticImageDemo1 {
                     //transform.rotateAngleX((float) Math.toRadians(2 * multiplier));
                     transform1.rotateAngleY((float) Math.toRadians(8 * multiplier));
                     transform2.rotateAngleY((float) Math.toRadians(8 * multiplier));
+                    
+                    transform1.getLocation().z = zDepth;
+                    transform2.getLocation().z = zDepth;
 
                     panel.repaint();
-                    //panel.paintImmediately(0,0,width, height);
+                    
                     try {
                         Thread.sleep(10);
                     } catch (InterruptedException ex) {
@@ -115,6 +124,25 @@ public class StaticImageDemo1 {
         frame.setLocationRelativeTo(null);
 
         frame.setVisible(true);
+        
+        frame.addKeyListener(new KeyListener() {
+
+            public void keyTyped(KeyEvent e) {
+                
+            }
+
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    zDepth += 50;
+                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    zDepth -= 50;
+                }
+            }
+
+            public void keyReleased(KeyEvent e) {
+                
+            }
+        });
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
