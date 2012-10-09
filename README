@@ -1,0 +1,14 @@
+Idea is to make a standalone 3d renderer without using opengl or anything like that.
+Renderer could be used for generating anything that needs a 3d scene (games, simulations, etc....)
+
+Will hopefully support:
+ - texture mapping
+ - vertex shaders
+ - fragment shaders
+ - backface culling
+ - z-buffer
+ - lighting?
+ - shadows???
+ - reflections!!?!?!?
+
+It'll be a bit slow because its written in Java, but thats part of the challenge....
