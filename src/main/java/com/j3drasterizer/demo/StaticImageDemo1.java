@@ -49,9 +49,6 @@ public class StaticImageDemo1 {
                 new Vector3D(5, -35, 0),
                 new Vector3D(-5, -35, 0));
         trunk.setColor(Color.RED);
-        
-        
-
 
         final Transform3D transform1 = new Transform3D(0, 0, zDepth);
         final Transform3D transform2 = new Transform3D(0, 0, zDepth);
@@ -143,7 +140,7 @@ public class StaticImageDemo1 {
                 
             }
         });
-
+        
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
