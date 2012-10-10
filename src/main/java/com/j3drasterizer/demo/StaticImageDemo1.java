@@ -51,8 +51,6 @@ public class StaticImageDemo1 {
         trunk.setColor(Color.RED);
 
         final Transform3D transform1 = new Transform3D(0, 0, zDepth);
-        final Transform3D transform2 = new Transform3D(0, 0, zDepth);
-        transform2.setAngleY((float) Math.toRadians(90));
 
         final PolygonRenderer polyRenderer = new PolygonRenderer(view);
 
@@ -62,7 +60,8 @@ public class StaticImageDemo1 {
 
         polyRenderer.setVertexShader(transformShader);
 
-        //polyRenderer.enableWireframe();
+        polyRenderer.disableFill();
+        polyRenderer.enableWireframe();
 
         final JPanel panel = new JPanel() {
             @Override
@@ -74,13 +73,7 @@ public class StaticImageDemo1 {
 
                 polyRenderer.startFrame(g2d);
 
-                transformShader.transform = transform1;
-                g2d.setColor(Color.GREEN);
-                polyRenderer.rasterize(leaves);
-                g2d.setColor(Color.red);
-                polyRenderer.rasterize(trunk);
-
-                transformShader.transform = transform2;
+                transformShader.transform.setTo(transform1);
                 g2d.setColor(Color.GREEN);
                 polyRenderer.rasterize(leaves);
                 g2d.setColor(Color.red);
@@ -97,10 +90,8 @@ public class StaticImageDemo1 {
                     //transform.rotateAngleZ((float) Math.toRadians(5 * multiplier));
                     //transform.rotateAngleX((float) Math.toRadians(2 * multiplier));
                     transform1.rotateAngleY((float) Math.toRadians(8 * multiplier));
-                    transform2.rotateAngleY((float) Math.toRadians(8 * multiplier));
                     
                     transform1.getLocation().z = zDepth;
-                    transform2.getLocation().z = zDepth;
 
                     panel.repaint();
                     
@@ -154,7 +145,7 @@ public class StaticImageDemo1 {
 
     private static class TransformShader implements VertexShader {
 
-        public Transform3D transform;
+        public Transform3D transform = new Transform3D();
 
         public void shade(Vector3D vertex) {
             vertex.addTransform(transform);

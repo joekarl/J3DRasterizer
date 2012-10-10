@@ -16,17 +16,18 @@ public class Polygon3D {
     private Vector3D[] vertices;
     private int vertNum;
     private Vector3D normal;
-    private static Vector3D tempV1, tempV2;
+    private static Vector3D tempV1 = new Vector3D();
+    private static Vector3D tempV2 = new Vector3D();
 
     public Polygon3D(Vector3D... vertices) {
         vertNum = vertices.length;
         this.vertices = vertices;
-        tempV1 = new Vector3D();
-        tempV2 = new Vector3D();
+        normal = new Vector3D();
+        calcNormal();
     }
 
     public Polygon3D() {
-        this(new Vector3D[0]);
+        this(new Vector3D(),new Vector3D(),new Vector3D());
     }
     
     public void setTo(Polygon3D p) {
@@ -35,6 +36,7 @@ public class Polygon3D {
         for (int i = 0; i < vertNum; i++) {
             vertices[i].setTo(p.vertices[i]);
         }
+        calcNormal();
     }
 
     protected void ensureCapacity(int capacity) {
@@ -49,7 +51,7 @@ public class Polygon3D {
     }
     
     
-    public Vector3D calcNormal() {
+    public final Vector3D calcNormal() {
         if (normal == null) {
             normal = new Vector3D();
         }
@@ -77,7 +79,8 @@ public class Polygon3D {
     public boolean isFacing (Vector3D v) {
         tempV1.setTo(v);
         tempV1.subtract(vertices[0]);
-        return (normal.getDotProduct(tempV1) >= 0.0f);
+        float dotProduct = normal.getDotProduct(tempV1);
+        return (dotProduct >= 0.0f);
     }
     
     public int getVertNum() {

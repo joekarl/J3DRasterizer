@@ -8,7 +8,7 @@ package com.j3drasterizer;
  *
  * @author karl
  */
-public class Transform3D {
+public final class Transform3D {
 
     private Vector3D location;
     private float cosAngleX,
@@ -43,7 +43,7 @@ public class Transform3D {
         this.cosAngleY = t.cosAngleY;
         this.sinAngleY = t.sinAngleY;
         this.cosAngleZ = t.cosAngleZ;
-        this.sinAngleZ = t.cosAngleZ;
+        this.sinAngleZ = t.sinAngleZ;
     }
 
     public Vector3D getLocation() {

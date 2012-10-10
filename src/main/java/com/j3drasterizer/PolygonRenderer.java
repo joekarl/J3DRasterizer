@@ -22,14 +22,16 @@ public class PolygonRenderer {
     private boolean wireframe;
     private boolean fill;
     private boolean enableVertexShader;
+    private Transform3D cameraPosition;
 
     public PolygonRenderer(ViewFrustum view) {
         this.view = view;
-        tPolygon = new Polygon3D();
+        tPolygon = new Polygon3D(new Vector3D(), new Vector3D(), new Vector3D());
         fill = true;
         wireframe = false;
         wireframeColor = Color.WHITE;
         enableVertexShader = false;
+        cameraPosition = new Transform3D();
     }
 
     public void startFrame(Graphics2D g2d) {
@@ -49,34 +51,40 @@ public class PolygonRenderer {
             for (int i = 0; i < vertNum; i++) {
                 Vector3D v = tPolygon.getVertex(i);
                 currentVertexShader.shade(v);
+                v.subtract(cameraPosition.getLocation());
             }
         }
 
-        Polygon3D.projectPolygonWithView(tPolygon, view);
+        if (tPolygon.isFacing(cameraPosition.getLocation())) {
 
-        GeneralPath path = new GeneralPath();
-        Vector3D v = tPolygon.getVertex(0);
-        path.moveTo(v.x, v.y);
-        for (int i = 1; i < vertNum; i++) {
-            v = tPolygon.getVertex(i);
-            path.lineTo(v.x, v.y);
-        }
-        path.closePath();
+            Polygon3D.projectPolygonWithView(tPolygon, view);
 
-        if (fill) {
-            g2d.fill(path);
-        }
+            GeneralPath path = new GeneralPath();
+            Vector3D v = tPolygon.getVertex(0);
+            path.moveTo(v.x, v.y);
+            g2d.drawString("0", v.x, v.y);
+            for (int i = 1; i < vertNum; i++) {
+                v = tPolygon.getVertex(i);
+                path.lineTo(v.x, v.y);
+                g2d.drawString("" + i, v.x, v.y);
+            }
+            path.closePath();
 
-        if (wireframe) {
-            g2d.setColor(wireframeColor);
-            g2d.draw(path);
+            if (fill) {
+                g2d.fill(path);
+            }
+
+            if (wireframe) {
+                g2d.setColor(wireframeColor);
+                g2d.draw(path);
+            }
         }
     }
 
     public void enableVertexShader() {
         enableVertexShader = true;
     }
-    
+
     public void setVertexShader(VertexShader currentVertexShader) {
         this.currentVertexShader = currentVertexShader;
     }
@@ -104,5 +112,9 @@ public class PolygonRenderer {
 
     public void disableFill() {
         this.fill = false;
+    }
+
+    public Transform3D getCameraPosition() {
+        return cameraPosition;
     }
 }
