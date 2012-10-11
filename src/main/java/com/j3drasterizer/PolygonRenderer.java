@@ -62,30 +62,33 @@ public class PolygonRenderer {
 
         if (!backFaceCulling || tPolygon.isFacing(cameraPosition.getLocation())) {
 
-            Polygon3D.projectPolygonWithView(tPolygon, view);
+            if (false || tPolygon.clipNearPlane(-1)) {
 
+                Polygon3D.projectPolygonWithView(tPolygon, view);
 
-
-            if (fill) {
-                scanConverter.convert(tPolygon);
-                for (int i = scanConverter.top; i <= scanConverter.bottom; i++) {
-                    ScanConverter.Scan scan = scanConverter.getScan(i);
-                    g2d.drawLine(scan.left, i, scan.right, i);
+                if (fill) {
+                    scanConverter.convert(tPolygon);
+                    for (int i = scanConverter.top; i <= scanConverter.bottom; i++) {
+                        ScanConverter.Scan scan = scanConverter.getScan(i);
+                        if (scan.isValid()) {
+                            g2d.drawLine(scan.left, i, scan.right, i);
+                        }
+                    }
                 }
-            }
 
-            if (wireframe) {
-                GeneralPath path = new GeneralPath();
-                Vector3D v = tPolygon.getVertex(0);
-                path.moveTo(v.x, v.y);
+                if (wireframe) {
+                    GeneralPath path = new GeneralPath();
+                    Vector3D v = tPolygon.getVertex(0);
+                    path.moveTo(v.x, v.y);
 
-                for (int i = 1; i < vertNum; i++) {
-                    v = tPolygon.getVertex(i);
-                    path.lineTo(v.x, v.y);
+                    for (int i = 1; i < vertNum; i++) {
+                        v = tPolygon.getVertex(i);
+                        path.lineTo(v.x, v.y);
+                    }
+                    path.closePath();
+                    g2d.setColor(wireframeColor);
+                    g2d.draw(path);
                 }
-                path.closePath();
-                g2d.setColor(wireframeColor);
-                g2d.draw(path);
             }
         }
     }

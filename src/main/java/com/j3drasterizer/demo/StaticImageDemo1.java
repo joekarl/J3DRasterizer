@@ -17,6 +17,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.image.BufferedImage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFrame;
@@ -70,10 +71,11 @@ public class StaticImageDemo1 {
         polyRenderer.disableBackFaceCulling();
 
         final JPanel panel = new JPanel() {
+            BufferedImage buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+
             @Override
             protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
+                Graphics2D g2d = (Graphics2D) buffer.getGraphics();
                 g2d.setColor(Color.BLACK);
                 g2d.fillRect(0, 0, width, height);
 
@@ -85,11 +87,13 @@ public class StaticImageDemo1 {
                 polyRenderer.rasterize(leaves);
                 g2d.setColor(Color.red);
                 polyRenderer.rasterize(trunk);
-                
+
                 g2d.setColor(Color.WHITE);
                 g2d.drawString(String.format("FPS %f", fpsCounter.getCountsPerSecond()), 10, 10);
 
                 polyRenderer.endFrame();
+                
+                g.drawImage(buffer, 0, 0, null);
             }
         };
 
@@ -111,7 +115,7 @@ public class StaticImageDemo1 {
                 }
             }
         }).start();
-        
+
         new Thread(new Runnable() {
             public void run() {
                 while (true) {
