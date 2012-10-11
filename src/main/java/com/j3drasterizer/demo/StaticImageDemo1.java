@@ -6,6 +6,7 @@ package com.j3drasterizer.demo;
 
 import com.j3drasterizer.PolygonRenderer;
 import com.j3drasterizer.SolidColoredPolygon3D;
+import com.j3drasterizer.TimeCounter;
 import com.j3drasterizer.Transform3D;
 import com.j3drasterizer.Vector3D;
 import com.j3drasterizer.VertexShader;
@@ -31,6 +32,10 @@ public class StaticImageDemo1 {
 
     public StaticImageDemo1() {
         JFrame frame = new JFrame("Static Image Demo 1");
+
+
+        final TimeCounter fpsCounter = new TimeCounter();
+
         final int width = 640, height = 480;
 
         final ViewFrustum view = new ViewFrustum(0, 0, width, height,
@@ -60,8 +65,9 @@ public class StaticImageDemo1 {
 
         polyRenderer.setVertexShader(transformShader);
 
-        polyRenderer.disableFill();
-        polyRenderer.enableWireframe();
+        //polyRenderer.disableFill();
+        //polyRenderer.enableWireframe();
+        polyRenderer.disableBackFaceCulling();
 
         final JPanel panel = new JPanel() {
             @Override
@@ -72,12 +78,16 @@ public class StaticImageDemo1 {
                 g2d.fillRect(0, 0, width, height);
 
                 polyRenderer.startFrame(g2d);
+                fpsCounter.tick();
 
                 transformShader.transform.setTo(transform1);
                 g2d.setColor(Color.GREEN);
                 polyRenderer.rasterize(leaves);
                 g2d.setColor(Color.red);
                 polyRenderer.rasterize(trunk);
+                
+                g2d.setColor(Color.WHITE);
+                g2d.drawString(String.format("FPS %f", fpsCounter.getCountsPerSecond()), 10, 10);
 
                 polyRenderer.endFrame();
             }
@@ -90,13 +100,24 @@ public class StaticImageDemo1 {
                     //transform.rotateAngleZ((float) Math.toRadians(5 * multiplier));
                     //transform.rotateAngleX((float) Math.toRadians(2 * multiplier));
                     transform1.rotateAngleY((float) Math.toRadians(8 * multiplier));
-                    
+
                     transform1.getLocation().z = zDepth;
 
-                    panel.repaint();
-                    
                     try {
                         Thread.sleep(10);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(StaticImageDemo1.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            }
+        }).start();
+        
+        new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                    panel.repaint();
+                    try {
+                        Thread.sleep(1);
                     } catch (InterruptedException ex) {
                         Logger.getLogger(StaticImageDemo1.class.getName()).log(Level.SEVERE, null, ex);
                     }
@@ -112,11 +133,9 @@ public class StaticImageDemo1 {
         frame.setLocationRelativeTo(null);
 
         frame.setVisible(true);
-        
-        frame.addKeyListener(new KeyListener() {
 
+        frame.addKeyListener(new KeyListener() {
             public void keyTyped(KeyEvent e) {
-                
             }
 
             public void keyPressed(KeyEvent e) {
@@ -128,10 +147,9 @@ public class StaticImageDemo1 {
             }
 
             public void keyReleased(KeyEvent e) {
-                
             }
         });
-        
+
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 

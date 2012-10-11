@@ -22,7 +22,9 @@ public class PolygonRenderer {
     private boolean wireframe;
     private boolean fill;
     private boolean enableVertexShader;
+    private boolean backFaceCulling;
     private Transform3D cameraPosition;
+    private ScanConverter scanConverter;
 
     public PolygonRenderer(ViewFrustum view) {
         this.view = view;
@@ -31,7 +33,9 @@ public class PolygonRenderer {
         wireframe = false;
         wireframeColor = Color.WHITE;
         enableVertexShader = false;
+        backFaceCulling = true;
         cameraPosition = new Transform3D();
+        scanConverter = new ScanConverter(view);
     }
 
     public void startFrame(Graphics2D g2d) {
@@ -54,27 +58,32 @@ public class PolygonRenderer {
                 v.subtract(cameraPosition.getLocation());
             }
         }
+        tPolygon.calcNormal();
 
-        if (tPolygon.isFacing(cameraPosition.getLocation())) {
+        if (!backFaceCulling || tPolygon.isFacing(cameraPosition.getLocation())) {
 
             Polygon3D.projectPolygonWithView(tPolygon, view);
 
-            GeneralPath path = new GeneralPath();
-            Vector3D v = tPolygon.getVertex(0);
-            path.moveTo(v.x, v.y);
-            g2d.drawString("0", v.x, v.y);
-            for (int i = 1; i < vertNum; i++) {
-                v = tPolygon.getVertex(i);
-                path.lineTo(v.x, v.y);
-                g2d.drawString("" + i, v.x, v.y);
-            }
-            path.closePath();
+
 
             if (fill) {
-                g2d.fill(path);
+                scanConverter.convert(tPolygon);
+                for (int i = scanConverter.top; i <= scanConverter.bottom; i++) {
+                    ScanConverter.Scan scan = scanConverter.getScan(i);
+                    g2d.drawLine(scan.left, i, scan.right, i);
+                }
             }
 
             if (wireframe) {
+                GeneralPath path = new GeneralPath();
+                Vector3D v = tPolygon.getVertex(0);
+                path.moveTo(v.x, v.y);
+
+                for (int i = 1; i < vertNum; i++) {
+                    v = tPolygon.getVertex(i);
+                    path.lineTo(v.x, v.y);
+                }
+                path.closePath();
                 g2d.setColor(wireframeColor);
                 g2d.draw(path);
             }
@@ -116,5 +125,13 @@ public class PolygonRenderer {
 
     public Transform3D getCameraPosition() {
         return cameraPosition;
+    }
+
+    public void enableBackFaceCulling() {
+        this.backFaceCulling = true;
+    }
+
+    public void disableBackFaceCulling() {
+        this.backFaceCulling = false;
     }
 }
