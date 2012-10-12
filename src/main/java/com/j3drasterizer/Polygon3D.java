@@ -90,6 +90,10 @@ public class Polygon3D {
     public Vector3D getVertex(int index) {
         return vertices[index];
     }
+    
+    public Vector3D getColor(int index) {
+        return null;
+    }
 
     public static Polygon3D projectPolygonWithView(Polygon3D p, ViewFrustum view) {
         for (Vector3D vertex : p.vertices) {

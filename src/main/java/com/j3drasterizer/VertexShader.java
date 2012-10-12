@@ -10,9 +10,8 @@ package com.j3drasterizer;
  */
 public abstract class VertexShader {
     public Transform3D worldTransform;
-    public Vector3D vertex;
-    public Vector3D position;
-    public Vector3D color;
+    public Vector3D inVertex, outVertex;
+    public Vector3D inColor, outColor;
     
     public abstract void shade();
     

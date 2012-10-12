@@ -27,6 +27,9 @@ public class PolygonRenderer {
     private Transform3D cameraPosition;
     private ScanConverter scanConverter;
     private BufferedImage renderBuffer;
+    private Vector3D fragmentColor;
+    private Vector3D defaultColor;
+    private Vector3D[] fragmentColorBuffer;
 
     public PolygonRenderer(ViewFrustum view) {
         this.view = view;
@@ -40,6 +43,12 @@ public class PolygonRenderer {
         scanConverter = new ScanConverter(view);
         renderBuffer = new BufferedImage(view.getLeftOffset() * 2 + view.getWidth(),
                 view.getTopOffset() * 2 + view.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        fragmentColor = new Vector3D(1, 1, 1);
+        defaultColor = new Vector3D(1, 1, 1);
+        fragmentColorBuffer = new Vector3D[10];
+        for (int i = 0; i < fragmentColorBuffer.length; i++) {
+            fragmentColorBuffer[i] = new Vector3D(1, 1, 1);
+        }
     }
 
     public void startFrame() {
@@ -47,6 +56,10 @@ public class PolygonRenderer {
         if (true) {
             g2d.setColor(Color.black);
             g2d.fillRect(0, 0, renderBuffer.getWidth(), renderBuffer.getHeight());
+            defaultColor.setTo(1, 1, 1);
+            for (int i = 0; i < fragmentColorBuffer.length; i++) {
+                fragmentColorBuffer[i].setTo(1, 1, 1);
+            }
         }
     }
 
@@ -59,15 +72,25 @@ public class PolygonRenderer {
         tPolygon.setTo(p);
 
         int vertNum = tPolygon.getVertNum();
-        
+
         if (currentVertexShader != null) {
             for (int i = 0; i < vertNum; i++) {
-                currentVertexShader.vertex = tPolygon.getVertex(i);
+                currentVertexShader.inVertex = tPolygon.getVertex(i);
+                Vector3D inColor = p.getColor(i);
+                if (inColor != null) {
+                    currentVertexShader.inColor = inColor;
+                } else {
+                    currentVertexShader.inColor = defaultColor;
+                }
+                currentVertexShader.outColor = currentVertexShader.inColor;
                 currentVertexShader.shade();
-                currentVertexShader.vertex.subtract(cameraPosition.getLocation());
+                currentVertexShader.outVertex.subtract(cameraPosition.getLocation());
+                if (currentVertexShader.outColor != null) {
+                    fragmentColorBuffer[i].setTo(currentVertexShader.outColor);
+                }
             }
         }
-        
+
         tPolygon.calcNormal();
 
         if (!backFaceCulling || tPolygon.isFacing(cameraPosition.getLocation())) {
@@ -77,11 +100,25 @@ public class PolygonRenderer {
                 Polygon3D.projectPolygonWithView(tPolygon, view);
 
                 if (fill) {
-                    scanConverter.convert(tPolygon);
+                    scanConverter.convert(tPolygon, fragmentColorBuffer);
                     for (int i = scanConverter.top; i <= scanConverter.bottom; i++) {
                         ScanConverter.Scan scan = scanConverter.getScan(i);
                         if (scan.isValid()) {
-                            g2d.drawLine(scan.left, i, scan.right, i);
+                            for (int j = scan.left; j <= scan.right; j++) {
+                                if (scan.left != scan.right) {
+                                    float lerp = (float)(j - scan.left) / (float)(scan.right - scan.left);
+                                    Vector3D.lerp(scan.colorLeft, scan.colorRight,
+                                            lerp,
+                                            fragmentColor);
+                                } else {
+                                    fragmentColor.setTo(scan.colorLeft);
+                                }
+                                g2d.setColor(new Color(
+                                        fragmentColor.x,
+                                        fragmentColor.y,
+                                        fragmentColor.z));
+                                g2d.drawLine(j, i, j, i);
+                            }
                         }
                     }
                 }

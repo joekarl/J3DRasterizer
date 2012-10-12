@@ -4,29 +4,30 @@
  */
 package com.j3drasterizer;
 
-import java.awt.Color;
-
 /**
  *
  * @author karl
  */
 public class SolidColoredPolygon3D extends Polygon3D {
 
-    private Color color;
+    private Vector3D color;
 
     public SolidColoredPolygon3D(Vector3D... vertices) {
         super(vertices);
+        color = new Vector3D(1, 1, 1);
     }
 
     public SolidColoredPolygon3D() {
         super();
+        color = new Vector3D(1, 1, 1);
     }
 
-    public Color getColor() {
+    public Vector3D getColor() {
         return color;
     }
 
-    public void setColor(Color c) {
-        this.color = c;
+    @Override
+    public Vector3D getColor(int index) {
+        return color;
     }
 }

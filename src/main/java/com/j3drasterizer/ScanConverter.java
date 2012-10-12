@@ -21,6 +21,8 @@ public class ScanConverter {
 
         public int left;
         public int right;
+        public Vector3D colorLeft = new Vector3D(1, 1, 1),
+                colorRight = new Vector3D(1, 1, 1);
 
         /**
          * Sets the left and right boundary for this scan if the x value is
@@ -41,6 +43,8 @@ public class ScanConverter {
         public void clear() {
             left = Integer.MAX_VALUE;
             right = Integer.MIN_VALUE;
+            colorLeft.setTo(1, 1, 1);
+            colorRight.setTo(1, 1, 1);
         }
 
         /**
@@ -128,7 +132,7 @@ public class ScanConverter {
      * Scan-converts a projected polygon. Returns true if the polygon is visible
      * in the view window.
      */
-    public boolean convert(Polygon3D polygon) {
+    public boolean convert(Polygon3D polygon, Vector3D... colors) {
 
         ensureCapacity();
         clearCurrentScan();
@@ -148,13 +152,33 @@ public class ScanConverter {
                 v2 = polygon.getVertex(i + 1);
             }
 
+            Vector3D color1, color2;
+            boolean calcColors = true;
+            if (colors == null) {
+                calcColors = false;
+            }
+            if (i < colors.length && i < polygon.getVertNum()) {
+                color1 = colors[i];
+            } else {
+                color1 = colors[0];
+            }
+            if (i <= colors.length + 1 && i + 1 < polygon.getVertNum()) {
+                color2 = colors[i + 1];
+            } else {
+                color2 = colors[0];
+            }
+
             // ensure v1.y < v2.y
             if (v1.y > v2.y) {
                 Vector3D temp = v1;
                 v1 = v2;
                 v2 = temp;
+                temp = color1;
+                color1 = color2;
+                color2 = temp;
             }
             float dy = v2.y - v1.y;
+            float dx = v2.x - v1.x;
 
             // ignore horizontal lines
             if (dy == 0) {
@@ -165,7 +189,6 @@ public class ScanConverter {
             int endY = Math.min(FastMath.ceilToInt(v2.y) - 1, maxY);
             top = Math.min(top, startY);
             bottom = Math.max(bottom, endY);
-            float dx = v2.x - v1.x;
 
             // special case: vertical line
             if (dx == 0) {
@@ -174,80 +197,104 @@ public class ScanConverter {
                 x = Math.min(maxX + 1, Math.max(x, minX));
                 for (int y = startY; y <= endY; y++) {
                     scans[y].setBoundary(x);
+
+                    if (colors != null && calcColors) {
+                        Vector3D colorLeft = scans[y].colorLeft;
+                        Vector3D colorRight = scans[y].colorRight;
+                        float lerp = (y - v1.y) / (v2.y - v1.y);
+                        Vector3D.lerp(color1, color2, lerp, colorLeft);
+                        Vector3D.lerp(color1, color2, lerp, colorRight);
+                    }
                 }
             } else {
                 // scan-convert this edge (line equation)
                 float gradient = dx / dy;
 
                 // (slower version)
-                /*
-                 for (int y=startY; y<=endY; y++) {
-                 int x = MoreMath.ceil(v1.x + (y - v1.y) * gradient);
-                 // ensure x within view bounds
-                 x = Math.min(maxX+1, Math.max(x, minX));
-                 scans[y].setBoundary(x);
-                 }
-                 */
+                //*
+                for (int y = startY; y <= endY; y++) {
+                    int x = FastMath.ceilToInt(v1.x + (y - v1.y) * gradient);
+                    // ensure x within view bounds
+                    x = Math.min(maxX + 1, Math.max(x, minX));
+
+                    scans[y].setBoundary(x);
+
+                    if (colors != null && calcColors) {
+                        Vector3D colorLeft = scans[y].colorLeft;
+                        Vector3D colorRight = scans[y].colorRight;
+
+                        float lerp = (y - v1.y) / (v2.y - v1.y);
+
+                        if (scans[y].left == x) {
+                            Vector3D.lerp(color1, color2, lerp, colorLeft);
+                        }
+                        if (scans[y].right == x - 1) {
+                            Vector3D.lerp(color1, color2, lerp, colorRight);
+                        }
+                    }
+                }
+                //*/
 
                 // (faster version)
+                /*
+                 // trim start of line
+                 float startX = v1.x + (startY - v1.y) * gradient;
+                 if (startX < minX) {
+                 int yInt = (int) (v1.y + (minX - v1.x)
+                 / gradient);
+                 yInt = Math.min(yInt, endY);
+                 while (startY <= yInt) {
+                 scans[startY].setBoundary(minX);
+                 startY++;
+                 }
+                 } else if (startX > maxX) {
+                 int yInt = (int) (v1.y + (maxX - v1.x)
+                 / gradient);
+                 yInt = Math.min(yInt, endY);
+                 while (startY <= yInt) {
+                 scans[startY].setBoundary(maxX + 1);
+                 startY++;
+                 }
+                 }
 
-                // trim start of line
-                float startX = v1.x + (startY - v1.y) * gradient;
-                if (startX < minX) {
-                    int yInt = (int) (v1.y + (minX - v1.x)
-                            / gradient);
-                    yInt = Math.min(yInt, endY);
-                    while (startY <= yInt) {
-                        scans[startY].setBoundary(minX);
-                        startY++;
-                    }
-                } else if (startX > maxX) {
-                    int yInt = (int) (v1.y + (maxX - v1.x)
-                            / gradient);
-                    yInt = Math.min(yInt, endY);
-                    while (startY <= yInt) {
-                        scans[startY].setBoundary(maxX + 1);
-                        startY++;
-                    }
-                }
+                 if (startY > endY) {
+                 continue;
+                 }
 
-                if (startY > endY) {
-                    continue;
-                }
+                 // trim back of line
+                 float endX = v1.x + (endY - v1.y) * gradient;
+                 if (endX < minX) {
+                 int yInt = FastMath.ceilToInt(v1.y + (minX - v1.x)
+                 / gradient);
+                 yInt = Math.max(yInt, startY);
+                 while (endY >= yInt) {
+                 scans[endY].setBoundary(minX);
+                 endY--;
+                 }
+                 } else if (endX > maxX) {
+                 int yInt = FastMath.ceilToInt(v1.y + (maxX - v1.x)
+                 / gradient);
+                 yInt = Math.max(yInt, startY);
+                 while (endY >= yInt) {
+                 scans[endY].setBoundary(maxX + 1);
+                 endY--;
+                 }
+                 }
 
-                // trim back of line
-                float endX = v1.x + (endY - v1.y) * gradient;
-                if (endX < minX) {
-                    int yInt = FastMath.ceilToInt(v1.y + (minX - v1.x)
-                            / gradient);
-                    yInt = Math.max(yInt, startY);
-                    while (endY >= yInt) {
-                        scans[endY].setBoundary(minX);
-                        endY--;
-                    }
-                } else if (endX > maxX) {
-                    int yInt = FastMath.ceilToInt(v1.y + (maxX - v1.x)
-                            / gradient);
-                    yInt = Math.max(yInt, startY);
-                    while (endY >= yInt) {
-                        scans[endY].setBoundary(maxX + 1);
-                        endY--;
-                    }
-                }
+                 if (startY > endY) {
+                 continue;
+                 }
 
-                if (startY > endY) {
-                    continue;
-                }
+                 // line equation using integers
+                 int xScaled = (int) (SCALE * v1.x
+                 + SCALE * (startY - v1.y) * dx / dy) + SCALE_MASK;
+                 int dxScaled = (int) (dx * SCALE / dy);
 
-                // line equation using integers
-                int xScaled = (int) (SCALE * v1.x
-                        + SCALE * (startY - v1.y) * dx / dy) + SCALE_MASK;
-                int dxScaled = (int) (dx * SCALE / dy);
-
-                for (int y = startY; y <= endY; y++) {
-                    scans[y].setBoundary(xScaled >> SCALE_BITS);
-                    xScaled += dxScaled;
-                }
+                 for (int y = startY; y <= endY; y++) {
+                 scans[y].setBoundary(xScaled >> SCALE_BITS);
+                 xScaled += dxScaled;
+                 }
+                 //*/
             }
         }
 

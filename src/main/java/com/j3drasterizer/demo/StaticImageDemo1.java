@@ -4,6 +4,7 @@
  */
 package com.j3drasterizer.demo;
 
+import com.j3drasterizer.ColoredPolygon3D;
 import com.j3drasterizer.PolygonRenderer;
 import com.j3drasterizer.SolidColoredPolygon3D;
 import com.j3drasterizer.TimeCounter;
@@ -18,6 +19,7 @@ import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFrame;
@@ -42,11 +44,14 @@ public class StaticImageDemo1 {
         final ViewFrustum view = new ViewFrustum(0, 0, width, height,
                 (float) Math.toRadians(75));
 
-        final SolidColoredPolygon3D leaves = new SolidColoredPolygon3D(
+        final ColoredPolygon3D leaves = new ColoredPolygon3D(
                 new Vector3D(-50, -35, 0),
                 new Vector3D(50, -35, 0),
                 new Vector3D(0, 150, 0));
-        leaves.setColor(Color.GREEN);
+        List<Vector3D> colors = leaves.getColors();
+        colors.add(new Vector3D(0, 0, 1));
+        colors.add(new Vector3D(0, 1, 0));
+        colors.add(new Vector3D(1, 0, 0));
 
 
         final SolidColoredPolygon3D trunk = new SolidColoredPolygon3D(
@@ -54,7 +59,7 @@ public class StaticImageDemo1 {
                 new Vector3D(5, -50, 0),
                 new Vector3D(5, -35, 0),
                 new Vector3D(-5, -35, 0));
-        trunk.setColor(Color.RED);
+        trunk.getColor().setTo(1, 0, 0);
 
         final Transform3D transform1 = new Transform3D(0, 0, zDepth);
 
@@ -66,8 +71,8 @@ public class StaticImageDemo1 {
 
         polyRenderer.setVertexShader(transformShader);
 
-        polyRenderer.disableFill();
-        polyRenderer.enableWireframe();
+        //polyRenderer.disableFill();
+        //polyRenderer.enableWireframe();
         polyRenderer.disableBackFaceCulling();
 
         final JPanel panel = new JPanel() {
@@ -112,7 +117,7 @@ public class StaticImageDemo1 {
                     }
                 }
             }
-        }).start();
+        });//.start();
 
         new Thread(new Runnable() {
             public void run() {
@@ -166,7 +171,7 @@ public class StaticImageDemo1 {
     private static class TransformShader extends VertexShader {
 
         public void shade() {
-            position = vertex.addTransform(worldTransform);
+            outVertex = inVertex.addTransform(worldTransform);
         }
     }
 }
