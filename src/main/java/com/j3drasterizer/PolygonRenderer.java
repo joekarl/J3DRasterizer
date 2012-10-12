@@ -7,6 +7,7 @@ package com.j3drasterizer;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.GeneralPath;
+import java.awt.image.BufferedImage;
 
 /**
  *
@@ -25,6 +26,7 @@ public class PolygonRenderer {
     private boolean backFaceCulling;
     private Transform3D cameraPosition;
     private ScanConverter scanConverter;
+    private BufferedImage renderBuffer;
 
     public PolygonRenderer(ViewFrustum view) {
         this.view = view;
@@ -36,14 +38,21 @@ public class PolygonRenderer {
         backFaceCulling = true;
         cameraPosition = new Transform3D();
         scanConverter = new ScanConverter(view);
+        renderBuffer = new BufferedImage(view.getLeftOffset() * 2 + view.getWidth(),
+                view.getTopOffset() * 2 + view.getHeight(), BufferedImage.TYPE_INT_ARGB);
     }
 
-    public void startFrame(Graphics2D g2d) {
-        this.g2d = g2d;
+    public void startFrame() {
+        this.g2d = (Graphics2D) renderBuffer.getGraphics();
+        if (true) {
+            g2d.setColor(Color.black);
+            g2d.fillRect(0, 0, renderBuffer.getWidth(), renderBuffer.getHeight());
+        }
     }
 
-    public void endFrame() {
+    public BufferedImage endFrame() {
         g2d = null;
+        return renderBuffer;
     }
 
     public void rasterize(Polygon3D p) {

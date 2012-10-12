@@ -66,35 +66,32 @@ public class StaticImageDemo1 {
 
         polyRenderer.setVertexShader(transformShader);
 
-        //polyRenderer.disableFill();
-        //polyRenderer.enableWireframe();
-        //polyRenderer.disableBackFaceCulling();
+        polyRenderer.disableFill();
+        polyRenderer.enableWireframe();
+        polyRenderer.disableBackFaceCulling();
 
         final JPanel panel = new JPanel() {
             BufferedImage buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 
             @Override
             protected void paintComponent(Graphics g) {
-                //Graphics2D g2d = (Graphics2D) buffer.getGraphics();
                 Graphics2D g2d = (Graphics2D) g;
                 g2d.setColor(Color.BLACK);
                 g2d.fillRect(0, 0, width, height);
 
-                polyRenderer.startFrame(g2d);
+                polyRenderer.startFrame();
                 fpsCounter.tick();
 
                 transformShader.worldTransform = transform1;
-                g2d.setColor(Color.GREEN);
+                //g2d.setColor(Color.GREEN);
                 polyRenderer.rasterize(leaves);
-                g2d.setColor(Color.red);
+                //g2d.setColor(Color.red);
                 polyRenderer.rasterize(trunk);
+
+                g2d.drawImage(polyRenderer.endFrame(), 0, 0, null);
 
                 g2d.setColor(Color.WHITE);
                 g2d.drawString(String.format("FPS %f", fpsCounter.getCountsPerSecond()), 10, 10);
-
-                polyRenderer.endFrame();
-
-                //g.drawImage(buffer, 0, 0, null);
             }
         };
 
