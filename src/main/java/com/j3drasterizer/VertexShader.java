@@ -8,8 +8,12 @@ package com.j3drasterizer;
  *
  * @author karl
  */
-public interface VertexShader {
+public abstract class VertexShader {
+    public Transform3D worldTransform;
+    public Vector3D vertex;
+    public Vector3D position;
+    public Vector3D color;
     
-    void shade(Vector3D vertex);
+    public abstract void shade();
     
 }

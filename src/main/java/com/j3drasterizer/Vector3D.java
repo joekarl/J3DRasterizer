@@ -24,108 +24,125 @@ public final class Vector3D {
         setTo(x, y, z);
     }
 
-    public void setTo(float x, float y, float z) {
+    public Vector3D setTo(float x, float y, float z) {
         this.x = x;
         this.y = y;
         this.z = z;
+        return this;
     }
 
-    public void setTo(Vector3D v) {
+    public Vector3D setTo(Vector3D v) {
         setTo(v.x, v.y, v.z);
+        return this;
     }
 
-    public void setToCrossProduct(Vector3D u, Vector3D v) {
+    public Vector3D setToCrossProduct(Vector3D u, Vector3D v) {
         float Xx = u.y * v.z - u.z * v.y;
         float Xy = u.z * v.x - u.x * v.z;
         float Xz = u.x * v.y - u.y * v.x;
         x = Xx;
         y = Xy;
         z = Xz;
+        return this;
     }
 
-    public void add(float x, float y, float z) {
+    public Vector3D add(float x, float y, float z) {
         this.x += x;
         this.y += y;
         this.z += z;
+        return this;
     }
 
-    public void add(Vector3D v) {
+    public Vector3D add(Vector3D v) {
         add(v.x, v.y, v.z);
+        return this;
     }
 
-    public void subtract(float x, float y, float z) {
+    public Vector3D subtract(float x, float y, float z) {
         add(-x, -y, -z);
+        return this;
     }
 
-    public void subtract(Vector3D v) {
+    public Vector3D subtract(Vector3D v) {
         subtract(v.x, v.y, v.z);
+        return this;
     }
 
-    public void multiply(float m) {
+    public Vector3D multiply(float m) {
         this.x *= m;
         this.y *= m;
         this.z *= m;
+        return this;
     }
 
-    public void divide(float m) {
+    public Vector3D divide(float m) {
         this.x /= m;
         this.y /= m;
         this.z /= m;
+        return this;
     }
 
     public float length() {
         return (float) Math.sqrt(x * x + y * y + z * z);
     }
 
-    public void normalize() {
+    public Vector3D normalize() {
         divide(length());
+        return this;
     }
 
-    public void rotateAroundX(float cosAngle, float sinAngle) {
+    public Vector3D rotateAroundX(float cosAngle, float sinAngle) {
         float newY = (y * cosAngle) - (z * sinAngle);
         float newZ = (y * sinAngle) + (z * cosAngle);
         y = newY;
         z = newZ;
+        return this;
     }
 
-    public void rotateAroundY(float cosAngle, float sinAngle) {
+    public Vector3D rotateAroundY(float cosAngle, float sinAngle) {
         float newZ = (z * cosAngle) - (x * sinAngle);
         float newX = (z * sinAngle) + (x * cosAngle);
         x = newX;
         z = newZ;
+        return this;
     }
 
-    public void rotateAroundZ(float cosAngle, float sinAngle) {
+    public Vector3D rotateAroundZ(float cosAngle, float sinAngle) {
         float newX = (x * cosAngle) - (y * sinAngle);
         float newY = (x * sinAngle) + (y * cosAngle);
         y = newY;
         x = newX;
+        return this;
     }
 
-    public void addRotation(Transform3D xform) {
+    public Vector3D addRotation(Transform3D xform) {
         rotateAroundX(xform.getCosAngleX(), xform.getSinAngleX());
         rotateAroundZ(xform.getCosAngleZ(), xform.getSinAngleZ());
         rotateAroundY(xform.getCosAngleY(), xform.getSinAngleY());
+        return this;
     }
 
-    public void subtractRotation(Transform3D xform) {
+    public Vector3D subtractRotation(Transform3D xform) {
         rotateAroundY(xform.getCosAngleY(), -xform.getSinAngleY());
         rotateAroundZ(xform.getCosAngleZ(), -xform.getSinAngleZ());
         rotateAroundX(xform.getCosAngleX(), -xform.getSinAngleX());
+        return this;
     }
 
-    public void addTransform(Transform3D xform) {
+    public Vector3D addTransform(Transform3D xform) {
         //rotate
         addRotation(xform);
         //translate
         add(xform.getLocation());
+        return this;
     }
 
-    public void subtractTransform(Transform3D xform) {
+    public Vector3D subtractTransform(Transform3D xform) {
         //rotate
         subtractRotation(xform);
         //translate
         subtract(xform.getLocation());
+        return this;
     }
 
     public boolean equals(float x, float y, float z) {

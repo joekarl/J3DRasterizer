@@ -50,14 +50,15 @@ public class PolygonRenderer {
         tPolygon.setTo(p);
 
         int vertNum = tPolygon.getVertNum();
-
+        
         if (currentVertexShader != null) {
             for (int i = 0; i < vertNum; i++) {
-                Vector3D v = tPolygon.getVertex(i);
-                currentVertexShader.shade(v);
-                v.subtract(cameraPosition.getLocation());
+                currentVertexShader.vertex = tPolygon.getVertex(i);
+                currentVertexShader.shade();
+                currentVertexShader.vertex.subtract(cameraPosition.getLocation());
             }
         }
+        
         tPolygon.calcNormal();
 
         if (!backFaceCulling || tPolygon.isFacing(cameraPosition.getLocation())) {
