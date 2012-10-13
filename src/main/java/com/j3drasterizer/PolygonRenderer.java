@@ -18,18 +18,22 @@ public class PolygonRenderer {
     private Polygon3D tPolygon;
     private final ViewFrustum view;
     private Graphics2D g2d;
-    private VertexShader currentVertexShader;
     private Color wireframeColor;
     private boolean wireframe;
     private boolean fill;
     private boolean enableVertexShader;
+    private boolean enableFragmentShader;
+    private VertexShader currentVertexShader;
+    private FragmentShader currentFragmentShader;
     private boolean backFaceCulling;
     private Transform3D cameraPosition;
     private ScanConverter scanConverter;
     private BufferedImage renderBuffer;
     private Vector3D fragmentColor;
+    private Vector3D shaderFrontColor;
+    private Vector3D shaderBackColor;
+    private Vector3D shaderVertexColor;
     private Vector3D defaultColor;
-    private Vector3D[] fragmentColorBuffer;
 
     public PolygonRenderer(ViewFrustum view) {
         this.view = view;
@@ -38,28 +42,35 @@ public class PolygonRenderer {
         wireframe = false;
         wireframeColor = Color.WHITE;
         enableVertexShader = false;
+        enableFragmentShader = false;
         backFaceCulling = true;
         cameraPosition = new Transform3D();
         scanConverter = new ScanConverter(view);
         renderBuffer = new BufferedImage(view.getLeftOffset() * 2 + view.getWidth(),
                 view.getTopOffset() * 2 + view.getHeight(), BufferedImage.TYPE_INT_ARGB);
         fragmentColor = new Vector3D(1, 1, 1);
+        shaderFrontColor = new Vector3D(1, 1, 1);
+        shaderBackColor = new Vector3D(1, 1, 1);
+        shaderVertexColor = new Vector3D(1, 1, 1);
         defaultColor = new Vector3D(1, 1, 1);
-        fragmentColorBuffer = new Vector3D[10];
-        for (int i = 0; i < fragmentColorBuffer.length; i++) {
-            fragmentColorBuffer[i] = new Vector3D(1, 1, 1);
-        }
     }
 
     public void startFrame() {
         this.g2d = (Graphics2D) renderBuffer.getGraphics();
-        if (true) {
-            g2d.setColor(Color.black);
-            g2d.fillRect(0, 0, renderBuffer.getWidth(), renderBuffer.getHeight());
-            defaultColor.setTo(1, 1, 1);
-            for (int i = 0; i < fragmentColorBuffer.length; i++) {
-                fragmentColorBuffer[i].setTo(1, 1, 1);
-            }
+        g2d.setColor(Color.black);
+        g2d.fillRect(0, 0, renderBuffer.getWidth(), renderBuffer.getHeight());
+        defaultColor.setTo(1, 1, 1);
+        if (shaderFrontColor == null) {
+            shaderFrontColor = new Vector3D(defaultColor);
+        }
+        if (shaderBackColor == null) {
+            shaderBackColor = new Vector3D(defaultColor);
+        }
+        if (fragmentColor == null) {
+            fragmentColor = new Vector3D(defaultColor);
+        }
+        if (shaderVertexColor == null) {
+            shaderVertexColor = new Vector3D(defaultColor);
         }
     }
 
@@ -76,18 +87,12 @@ public class PolygonRenderer {
         if (currentVertexShader != null) {
             for (int i = 0; i < vertNum; i++) {
                 currentVertexShader.inVertex = tPolygon.getVertex(i);
-                Vector3D inColor = p.getColor(i);
-                if (inColor != null) {
-                    currentVertexShader.inColor = inColor;
-                } else {
-                    currentVertexShader.inColor = defaultColor;
-                }
+                shaderVertexColor.setTo(p.getColor(i));
+                currentVertexShader.inColor = shaderVertexColor;
                 currentVertexShader.outColor = currentVertexShader.inColor;
                 currentVertexShader.shade();
                 currentVertexShader.outVertex.subtract(cameraPosition.getLocation());
-                if (currentVertexShader.outColor != null) {
-                    fragmentColorBuffer[i].setTo(currentVertexShader.outColor);
-                }
+                tPolygon.getColor(i).setTo(currentVertexShader.outColor);
             }
         }
 
@@ -100,18 +105,27 @@ public class PolygonRenderer {
                 Polygon3D.projectPolygonWithView(tPolygon, view);
 
                 if (fill) {
-                    scanConverter.convert(tPolygon, fragmentColorBuffer);
+                    scanConverter.convert(tPolygon);
                     for (int i = scanConverter.top; i <= scanConverter.bottom; i++) {
                         ScanConverter.Scan scan = scanConverter.getScan(i);
                         if (scan.isValid()) {
                             for (int j = scan.left; j <= scan.right; j++) {
                                 if (scan.left != scan.right) {
-                                    float lerp = (float)(j - scan.left) / (float)(scan.right - scan.left);
+                                    float lerp = (float) (j - scan.left) / (float) (scan.right - scan.left);
                                     Vector3D.lerp(scan.colorLeft, scan.colorRight,
                                             lerp,
                                             fragmentColor);
                                 } else {
                                     fragmentColor.setTo(scan.colorLeft);
+                                }
+                                if (enableFragmentShader) {
+                                    currentFragmentShader.fragmentColor = fragmentColor;
+                                    shaderFrontColor.setTo(fragmentColor);
+                                    shaderBackColor.setTo(fragmentColor);
+                                    currentFragmentShader.frontColor = shaderFrontColor;
+                                    currentFragmentShader.backColor = shaderBackColor;
+                                    currentFragmentShader.shade();
+                                    fragmentColor.setTo(currentFragmentShader.fragmentColor);
                                 }
                                 g2d.setColor(new Color(
                                         fragmentColor.x,
@@ -149,8 +163,19 @@ public class PolygonRenderer {
     }
 
     public void disableVertexShader() {
-        this.currentVertexShader = null;
         enableVertexShader = false;
+    }
+
+    public void enableFragmentShader() {
+        enableFragmentShader = true;
+    }
+
+    public void setFragmentShader(FragmentShader currentFragmentShader) {
+        this.currentFragmentShader = currentFragmentShader;
+    }
+
+    public void disableFragmentShader() {
+        enableFragmentShader = false;
     }
 
     public void setWireframeColor(Color wireframeColor) {

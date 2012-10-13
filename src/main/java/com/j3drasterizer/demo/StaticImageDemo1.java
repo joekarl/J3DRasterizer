@@ -4,9 +4,9 @@
  */
 package com.j3drasterizer.demo;
 
-import com.j3drasterizer.ColoredPolygon3D;
+import com.j3drasterizer.FragmentShader;
+import com.j3drasterizer.Polygon3D;
 import com.j3drasterizer.PolygonRenderer;
-import com.j3drasterizer.SolidColoredPolygon3D;
 import com.j3drasterizer.TimeCounter;
 import com.j3drasterizer.Transform3D;
 import com.j3drasterizer.Vector3D;
@@ -19,7 +19,6 @@ import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFrame;
@@ -44,32 +43,31 @@ public class StaticImageDemo1 {
         final ViewFrustum view = new ViewFrustum(0, 0, width, height,
                 (float) Math.toRadians(75));
 
-        final ColoredPolygon3D leaves = new ColoredPolygon3D(
+        final Polygon3D leaves = new Polygon3D(
                 new Vector3D(-50, -35, 0),
                 new Vector3D(50, -35, 0),
                 new Vector3D(0, 150, 0));
-        List<Vector3D> colors = leaves.getColors();
-        colors.add(new Vector3D(0, 0, 1));
-        colors.add(new Vector3D(0, 1, 0));
-        colors.add(new Vector3D(1, 0, 0));
+        leaves.getColor(0).setTo(1, 0, 0);
+        leaves.getColor(1).setTo(0, 1, 0);
+        leaves.getColor(2).setTo(0, 0, 1);
 
-
-        final SolidColoredPolygon3D trunk = new SolidColoredPolygon3D(
+        final Polygon3D trunk = new Polygon3D(
                 new Vector3D(-5, -50, 0),
                 new Vector3D(5, -50, 0),
                 new Vector3D(5, -35, 0),
                 new Vector3D(-5, -35, 0));
-        trunk.getColor().setTo(1, 0, 0);
+        trunk.getColor(0).setTo(1, 0, 0);
 
         final Transform3D transform1 = new Transform3D(0, 0, zDepth);
 
         final PolygonRenderer polyRenderer = new PolygonRenderer(view);
 
+        final TransformShader transformShader = new TransformShader();
+        polyRenderer.setVertexShader(transformShader);
         polyRenderer.enableVertexShader();
 
-        final TransformShader transformShader = new TransformShader();
-
-        polyRenderer.setVertexShader(transformShader);
+        final FragmentShader fragmentShader = new FragShader();
+        polyRenderer.setFragmentShader(fragmentShader);
 
         //polyRenderer.disableFill();
         //polyRenderer.enableWireframe();
@@ -88,9 +86,10 @@ public class StaticImageDemo1 {
                 fpsCounter.tick();
 
                 transformShader.worldTransform = transform1;
-                //g2d.setColor(Color.GREEN);
+                polyRenderer.disableFragmentShader();
                 polyRenderer.rasterize(leaves);
-                //g2d.setColor(Color.red);
+
+                polyRenderer.enableFragmentShader();
                 polyRenderer.rasterize(trunk);
 
                 g2d.drawImage(polyRenderer.endFrame(), 0, 0, null);
@@ -117,7 +116,7 @@ public class StaticImageDemo1 {
                     }
                 }
             }
-        });//.start();
+        }).start();
 
         new Thread(new Runnable() {
             public void run() {
@@ -172,6 +171,13 @@ public class StaticImageDemo1 {
 
         public void shade() {
             outVertex = inVertex.addTransform(worldTransform);
+        }
+    }
+
+    private static class FragShader extends FragmentShader {
+
+        public void shade() {
+            fragmentColor.setTo(0, 1, 0);
         }
     }
 }

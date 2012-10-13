@@ -68,6 +68,10 @@ public class ScanConverter {
         public boolean equals(int left, int right) {
             return (this.left == left && this.right == right);
         }
+        
+        public int width() {
+            return this.right - this.left;
+        }
     }
 
     /**
@@ -128,11 +132,17 @@ public class ScanConverter {
         bottom = Integer.MIN_VALUE;
     }
 
+    private boolean colorInRange(Vector3D color) {
+        return color.x != -1
+                    && color.y != -1
+                    && color.z != -1;
+    }
+    
     /**
      * Scan-converts a projected polygon. Returns true if the polygon is visible
      * in the view window.
      */
-    public boolean convert(Polygon3D polygon, Vector3D... colors) {
+    public boolean convert(Polygon3D polygon) {
 
         ensureCapacity();
         clearCurrentScan();
@@ -154,18 +164,33 @@ public class ScanConverter {
 
             Vector3D color1, color2;
             boolean calcColors = true;
+            
+            Vector3D[] colors = polygon.getColors();
             if (colors == null) {
-                calcColors = false;
+                throw new IllegalStateException();
             }
+            
+            Vector3D defaultColor = colors[0];
+            if (!colorInRange(defaultColor)) {
+                defaultColor.setTo(1, 1, 1);
+            }
+            
             if (i < colors.length && i < polygon.getVertNum()) {
                 color1 = colors[i];
+                if (!colorInRange(color1)) {
+                    color1 = defaultColor;
+                }
             } else {
-                color1 = colors[0];
+                color1 = defaultColor;
             }
+           
             if (i <= colors.length + 1 && i + 1 < polygon.getVertNum()) {
                 color2 = colors[i + 1];
+                if (!colorInRange(color2)) {
+                    color2 = defaultColor;
+                }
             } else {
-                color2 = colors[0];
+                color2 = defaultColor;
             }
 
             // ensure v1.y < v2.y
@@ -198,7 +223,7 @@ public class ScanConverter {
                 for (int y = startY; y <= endY; y++) {
                     scans[y].setBoundary(x);
 
-                    if (colors != null && calcColors) {
+                    if (calcColors) {
                         Vector3D colorLeft = scans[y].colorLeft;
                         Vector3D colorRight = scans[y].colorRight;
                         float lerp = (y - v1.y) / (v2.y - v1.y);
@@ -219,7 +244,7 @@ public class ScanConverter {
 
                     scans[y].setBoundary(x);
 
-                    if (colors != null && calcColors) {
+                    if (calcColors) {
                         Vector3D colorLeft = scans[y].colorLeft;
                         Vector3D colorRight = scans[y].colorRight;
 

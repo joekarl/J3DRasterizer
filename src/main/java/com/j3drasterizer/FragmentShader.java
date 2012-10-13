@@ -6,14 +6,13 @@ package com.j3drasterizer;
 
 /**
  *
- * @author karl
+ * @author Karl Kirch
  */
-public abstract class VertexShader extends Shader {
+public abstract class FragmentShader extends Shader {
 
-    public Transform3D worldTransform;
-    public Vector3D inVertex, outVertex;
-    public Vector3D inColor, outColor;
-
+    public Vector3D frontColor, backColor, fragmentColor;
+    
     @Override
     public abstract void shade();
+    
 }
