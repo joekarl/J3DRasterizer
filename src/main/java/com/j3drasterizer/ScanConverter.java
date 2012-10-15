@@ -162,35 +162,38 @@ public class ScanConverter {
                 v2 = polygon.getVertex(i + 1);
             }
 
-            Color4f color1, color2;
-            boolean calcColors = true;
+            Color4f color1 = null, color2 = null;
+            boolean calcColors = polygon.isColored() && !polygon.isSolidColored();
 
-            Color4f[] colors = polygon.getColors();
-            if (colors == null) {
-                throw new IllegalStateException();
-            }
+            if (calcColors) {
+                Color4f[] colors = polygon.getColors();
 
-            Color4f defaultColor = colors[0];
-            if (!colorInRange(defaultColor)) {
-                defaultColor.setTo(1, 1, 1);
-            }
+                if (colors == null) {
+                    throw new IllegalStateException();
+                }
 
-            if (i < colors.length && i < polygon.getVertNum()) {
-                color1 = colors[i];
-                if (!colorInRange(color1)) {
+                Color4f defaultColor = colors[0];
+                if (!colorInRange(defaultColor)) {
+                    defaultColor.setTo(1, 1, 1);
+                }
+
+                if (i < colors.length && i < polygon.getVertNum()) {
+                    color1 = colors[i];
+                    if (!colorInRange(color1)) {
+                        color1 = defaultColor;
+                    }
+                } else {
                     color1 = defaultColor;
                 }
-            } else {
-                color1 = defaultColor;
-            }
 
-            if (i <= colors.length + 1 && i + 1 < polygon.getVertNum()) {
-                color2 = colors[i + 1];
-                if (!colorInRange(color2)) {
+                if (i <= colors.length + 1 && i + 1 < polygon.getVertNum()) {
+                    color2 = colors[i + 1];
+                    if (!colorInRange(color2)) {
+                        color2 = defaultColor;
+                    }
+                } else {
                     color2 = defaultColor;
                 }
-            } else {
-                color2 = defaultColor;
             }
 
             // ensure v1.y < v2.y
@@ -229,21 +232,21 @@ public class ScanConverter {
             } else {
 
                 /*
-                // scan-convert this edge (line equation)
-                float gradient = dx / dy;
+                 // scan-convert this edge (line equation)
+                 float gradient = dx / dy;
 
-                // (slower version)
-                for (int y = startY; y <= endY; y++) {
-                    int x = FastMath.ceilToInt(v1.x + (y - v1.y) * gradient);
-                    // ensure x within view bounds
-                    x = Math.min(maxX + 1, Math.max(x, minX));
+                 // (slower version)
+                 for (int y = startY; y <= endY; y++) {
+                 int x = FastMath.ceilToInt(v1.x + (y - v1.y) * gradient);
+                 // ensure x within view bounds
+                 x = Math.min(maxX + 1, Math.max(x, minX));
 
-                    scans[y].setBoundary(x);
+                 scans[y].setBoundary(x);
 
-                    calcColors(calcColors, y, v1.y, v2.y, x,
-                            color1, color2, scans);
-                }
-                //*/
+                 calcColors(calcColors, y, v1.y, v2.y, x,
+                 color1, color2, scans);
+                 }
+                 //*/
 
                 // (faster version)
                 /*
@@ -302,17 +305,17 @@ public class ScanConverter {
 
                 // line equation using integers
                 //*
-                 int xScaled = (int) (SCALE * v1.x
-                 + SCALE * (startY - v1.y) * dx / dy) + SCALE_MASK;
-                 int dxScaled = (int) (dx * SCALE / dy);
+                int xScaled = (int) (SCALE * v1.x
+                        + SCALE * (startY - v1.y) * dx / dy) + SCALE_MASK;
+                int dxScaled = (int) (dx * SCALE / dy);
 
-                 for (int y = startY; y <= endY; y++) {
-                 scans[y].setBoundary(xScaled >> SCALE_BITS);
-                 calcColors(calcColors, y, v1.y, v2.y, xScaled >> SCALE_BITS,
-                 color1, color2, scans);
-                 xScaled += dxScaled;
-                 }
-                 //*/
+                for (int y = startY; y <= endY; y++) {
+                    scans[y].setBoundary(xScaled >> SCALE_BITS);
+                    calcColors(calcColors, y, v1.y, v2.y, xScaled >> SCALE_BITS,
+                            color1, color2, scans);
+                    xScaled += dxScaled;
+                }
+                //*/
             }
         }
 

@@ -22,6 +22,9 @@ public class Polygon3D {
     private static Vector3D tempV1 = new Vector3D();
     private static Vector3D tempV2 = new Vector3D();
     public boolean isClipped;
+    private boolean isColored;
+    private boolean isSolidColored;
+    private Color4f solidColor;
 
     public Polygon3D(Vector3D... vertices) {
         vertNum = vertices.length;
@@ -29,6 +32,7 @@ public class Polygon3D {
         normal = new Vector3D();
         calcNormal();
         colors = new Color4f[vertNum];
+        solidColor = new Color4f(-1, -1, -1, -1);
         for (int i = 0; i < vertNum; i++) {
             colors[i] = new Color4f(-1, -1, -1, -1);
         }
@@ -38,26 +42,56 @@ public class Polygon3D {
         this(new Vector3D(), new Vector3D(), new Vector3D());
     }
 
-    public void setTo(Polygon3D p) {
-        vertNum = p.vertNum;
-        ensureCapacity(vertNum);
-        for (int i = 0; i < vertNum; i++) {
-            vertices[i].setTo(p.vertices[i]);
-            colors[i].setTo(p.colors[i]);
-        }
-        isClipped = false;
-        calcNormal();
+    public void setTo(Polygon3D p, boolean copyColorState) {
+        setTo(p, copyColorState, null);
     }
-    
-    public void setTo(Polygon3D p, int ... verticeIndexes) {
+
+    public void setTo(Polygon3D p) {
+        setTo(p, false);
+    }
+
+    public void setTo(Polygon3D p, boolean copyColorState, int... verticeIndexes) {
+        if (verticeIndexes == null) {
+            verticeIndexes = new int[p.getVertNum()];
+            for (int i = 0; i < verticeIndexes.length; i++) {
+                verticeIndexes[i] = i;
+            }
+        }
         vertNum = verticeIndexes.length;
         ensureCapacity(vertNum);
         for (int i = 0; i < vertNum; i++) {
             vertices[i].setTo(p.vertices[verticeIndexes[i]]);
-            colors[i].setTo(p.colors[verticeIndexes[i]]);
+            Color4f color = p.colors[verticeIndexes[i]];
+            colors[i].setTo(color);
         }
         isClipped = false;
         calcNormal();
+        if (copyColorState) {
+            solidColor.setTo(p.getColor(0));
+            if (colors[0].getR() != -1
+                    && colors[0].getG() != -1
+                    && colors[0].getB() != -1) {
+                isColored = true;
+            } else {
+                isColored = false;
+            }
+            if (isColored && colors[1].getR() == -1
+                    && colors[1].getG() == -1
+                    && colors[1].getB() == -1) {
+                isSolidColored = true;
+            } else {
+                isSolidColored = false;
+            }
+        } else {
+            solidColor.setTo(p.getSolidColor());
+            isColored = p.isColored;
+            isSolidColored = p.isSolidColored;
+        }
+
+    }
+
+    public void setTo(Polygon3D p, int... verticeIndexes) {
+        setTo(p, false, verticeIndexes);
     }
 
     protected void ensureCapacity(int capacity) {
@@ -117,6 +151,10 @@ public class Polygon3D {
 
     public Color4f getColor(int index) {
         return colors[index];
+    }
+
+    public Color4f getSolidColor() {
+        return solidColor;
     }
 
     public static Polygon3D projectPolygonWithView(Polygon3D p, ViewFrustum view) {
@@ -205,6 +243,16 @@ public class Polygon3D {
         Color4f color2 = colors[vert2];
 
         float lerp = (y - v1.y) / (v2.y - v1.y);
+        if (Float.isNaN(lerp)) {
+            lerp = (x - v1.x) / (v2.x - v1.x);
+            if (Float.isNaN(lerp)) {
+                lerp = (z - v1.z) / (v2.z - v1.z);
+                if (Float.isNaN(lerp)) {
+                    //FML!! fail....
+                    lerp = 0;
+                }
+            }
+        }
         Color4f.lerp(color1, color2, lerp, newColor);
 
         colors[index] = newColor;
@@ -224,6 +272,14 @@ public class Polygon3D {
 
     Color4f[] getColors() {
         return colors;
+    }
+
+    public boolean isColored() {
+        return isColored;
+    }
+
+    public boolean isSolidColored() {
+        return isSolidColored;
     }
 
     @Override

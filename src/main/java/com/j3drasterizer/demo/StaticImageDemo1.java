@@ -44,12 +44,12 @@ public class StaticImageDemo1 {
                 (float) Math.toRadians(75));
 
         final Polygon3D leaves = new Polygon3D(
+                new Vector3D(0, 100, 0),
                 new Vector3D(-50, -35, 0),
-                new Vector3D(50, -35, 0),
-                new Vector3D(0, 100, 0));
-        leaves.getColor(0).setTo(1, 0, 0);
-        leaves.getColor(1).setTo(0, 1, 0);
-        leaves.getColor(2).setTo(0, 0, 1);
+                new Vector3D(50, -35, 0));
+        leaves.getColor(0).setTo(1, 0, 1);
+        leaves.getColor(1).setTo(0, 1, 1);
+        leaves.getColor(2).setTo(1, 0.5f, 0);
 
         final Polygon3D trunk = new Polygon3D(
                 new Vector3D(-5, -50, 0),
@@ -59,6 +59,7 @@ public class StaticImageDemo1 {
         trunk.getColor(0).setTo(1, 0.5f, 0);
 
         final Transform3D transform1 = new Transform3D(0, 0, -220);
+        transform1.setAngleY((float) Math.toRadians(45));
 
         final PolygonRenderer polyRenderer = new PolygonRenderer(view);
 
@@ -70,7 +71,7 @@ public class StaticImageDemo1 {
         polyRenderer.setFragmentShader(fragmentShader);
 
         //polyRenderer.disableFill();
-        polyRenderer.enableWireframe();
+        //polyRenderer.enableWireframe();
         polyRenderer.disableBackFaceCulling();
 
         final JPanel panel = new JPanel() {
@@ -86,11 +87,11 @@ public class StaticImageDemo1 {
                 fpsCounter.tick();
 
                 transformShader.worldTransform = transform1;
-                polyRenderer.disableFragmentShader();
+                polyRenderer.enableFragmentShader();
                 polyRenderer.rasterize(leaves);
 
-                polyRenderer.enableFragmentShader();
-                //polyRenderer.rasterize(trunk);
+                polyRenderer.disableFragmentShader();
+                polyRenderer.rasterize(trunk);
 
                 g2d.drawImage(polyRenderer.endFrame(), 0, 0, null);
 
@@ -105,7 +106,7 @@ public class StaticImageDemo1 {
                     float multiplier = 0.3f;
                     //transform.rotateAngleZ((float) Math.toRadians(5 * multiplier));
                     //transform.rotateAngleX((float) Math.toRadians(2 * multiplier));
-                    transform1.rotateAngleY((float) Math.toRadians(1 * multiplier));
+                    //transform1.rotateAngleY((float) Math.toRadians(8 * multiplier));
 
                     polyRenderer.getCameraPosition().getLocation().z = -zDepth;
 
@@ -178,7 +179,10 @@ public class StaticImageDemo1 {
     private static class FragShader extends FragmentShader {
 
         public void shade() {
-            //fragmentColor.setTo(0, 255, 0);
+            float saturation = (frontColor.getR()
+                    + frontColor.getG() + frontColor.getB());
+            float saturationValue = saturation / 3.0f;
+            //fragmentColor.setTo(saturationValue, saturationValue, saturationValue);
         }
     }
 }
