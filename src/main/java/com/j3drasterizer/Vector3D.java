@@ -177,9 +177,6 @@ public final class Vector3D {
     }
     
     public static void lerp(Vector3D v1, Vector3D v2, float lerp, Vector3D destination) {
-        if (lerp == Float.NaN) {
-            lerp = 0;
-        }
         destination.setTo((v2.x - v1.x) * lerp + v1.x, 
                 (v2.y - v1.y) * lerp + v1.y,  
                 (v2.z - v1.z) * lerp + v1.z);

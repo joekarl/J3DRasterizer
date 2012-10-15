@@ -41,21 +41,22 @@ public class StaticImageDemo1 {
         final int width = 640, height = 480;
 
         final ViewFrustum view = new ViewFrustum(0, 0, width, height,
-                (float) Math.toRadians(75));
+                (float) Math.toRadians(75), -1, -2000);
 
+        final int scale = 5;
         final Polygon3D leaves = new Polygon3D(
-                new Vector3D(0, 100, 0),
-                new Vector3D(-50, -35, 0),
-                new Vector3D(50, -35, 0));
+                new Vector3D(0, 100, 0).multiply(scale),
+                new Vector3D(-50, -35, 0).multiply(scale),
+                new Vector3D(50, -35, 0).multiply(scale));
         leaves.getColor(0).setTo(1, 0, 1);
         leaves.getColor(1).setTo(0, 1, 1);
         leaves.getColor(2).setTo(1, 0.5f, 0);
 
         final Polygon3D trunk = new Polygon3D(
-                new Vector3D(-5, -50, 0),
-                new Vector3D(5, -50, 0),
-                new Vector3D(5, -35, 0),
-                new Vector3D(-5, -35, 0));
+                new Vector3D(-5, -50, 0).multiply(scale),
+                new Vector3D(5, -50, 0).multiply(scale),
+                new Vector3D(5, -35, 0).multiply(scale),
+                new Vector3D(-5, -35, 0).multiply(scale));
         trunk.getColor(0).setTo(1, 0.5f, 0);
 
         final Transform3D transform1 = new Transform3D(0, 0, -220);
@@ -67,12 +68,13 @@ public class StaticImageDemo1 {
         polyRenderer.setVertexShader(transformShader);
         polyRenderer.enableVertexShader();
 
-        final FragmentShader fragmentShader = new FragShader();
+        final FragShader fragmentShader = new FragShader();
         polyRenderer.setFragmentShader(fragmentShader);
 
         //polyRenderer.disableFill();
         //polyRenderer.enableWireframe();
         polyRenderer.disableBackFaceCulling();
+        //polyRenderer.disableAdaptiveSmoothing();
 
         final JPanel panel = new JPanel() {
             BufferedImage buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
@@ -97,6 +99,8 @@ public class StaticImageDemo1 {
 
                 g2d.setColor(Color.WHITE);
                 g2d.drawString(String.format("FPS %f", fpsCounter.getCountsPerSecond()), 5, 15);
+
+                this.repaint();
             }
         };
 
@@ -104,11 +108,7 @@ public class StaticImageDemo1 {
             public void run() {
                 while (true) {
                     float multiplier = 0.3f;
-                    //transform.rotateAngleZ((float) Math.toRadians(5 * multiplier));
-                    //transform.rotateAngleX((float) Math.toRadians(2 * multiplier));
-                    //transform1.rotateAngleY((float) Math.toRadians(8 * multiplier));
-
-                    polyRenderer.getCameraPosition().getLocation().z = -zDepth;
+                    //transform1.rotateAngleY((float) Math.toRadians(30 * multiplier));
 
                     try {
                         Thread.sleep(10);
@@ -122,7 +122,6 @@ public class StaticImageDemo1 {
         new Thread(new Runnable() {
             public void run() {
                 while (true) {
-                    panel.repaint();
                     try {
                         Thread.sleep(1);
                     } catch (InterruptedException ex) {
@@ -148,9 +147,9 @@ public class StaticImageDemo1 {
 
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_UP) {
-                    zDepth += 10;
+                    polyRenderer.getCameraPosition().getLocation().z += 10 * scale;
                 } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-                    zDepth -= 10;
+                    polyRenderer.getCameraPosition().getLocation().z -= 10 * scale;
                 }
             }
 
@@ -179,10 +178,6 @@ public class StaticImageDemo1 {
     private static class FragShader extends FragmentShader {
 
         public void shade() {
-            float saturation = (frontColor.getR()
-                    + frontColor.getG() + frontColor.getB());
-            float saturationValue = saturation / 3.0f;
-            //fragmentColor.setTo(saturationValue, saturationValue, saturationValue);
         }
     }
 }

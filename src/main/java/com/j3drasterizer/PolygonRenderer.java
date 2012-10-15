@@ -26,6 +26,7 @@ public class PolygonRenderer {
     private boolean enableVertexShader;
     private boolean enableFragmentShader;
     private boolean backFaceCulling;
+    private boolean adaptiveSmoothing;
     private VertexShader currentVertexShader;
     private FragmentShader currentFragmentShader;
     private Transform3D cameraPosition;
@@ -36,6 +37,7 @@ public class PolygonRenderer {
     private Color4f shaderBackColor;
     private Color4f shaderVertexColor;
     private Color4f defaultColor;
+    private Vector3D fragmentPosition;
 
     public PolygonRenderer(ViewFrustum view) {
         this.view = view;
@@ -46,6 +48,7 @@ public class PolygonRenderer {
         wireframeColor = Color.WHITE;
         enableVertexShader = false;
         enableFragmentShader = false;
+        adaptiveSmoothing = true;
         backFaceCulling = true;
         cameraPosition = new Transform3D();
         scanConverter = new ScanConverter(view);
@@ -56,6 +59,7 @@ public class PolygonRenderer {
         shaderBackColor = new Color4f(1, 1, 1);
         shaderVertexColor = new Color4f(1, 1, 1);
         defaultColor = new Color4f(1, 1, 1);
+        fragmentPosition = new Vector3D();
     }
 
     public void startFrame() {
@@ -103,7 +107,8 @@ public class PolygonRenderer {
 
         if (!backFaceCulling || tPolygon.isFacing(cameraPosition.getLocation())) {
 
-            if (false || tPolygon.clipNearPlane(-1)) {
+            if (tPolygon.clipNearPlane(view.getNearClipPlane())
+                    & tPolygon.clipFarPlane(view.getFarClipPlane())) {
 
                 Polygon3D.projectPolygonWithView(tPolygon, view);
                 int subPolygonCount = 1;
@@ -128,6 +133,11 @@ public class PolygonRenderer {
                         path.closePath();
                         g2d.setColor(wireframeColor);
                         g2d.draw(path);
+                    }
+
+                    if (tPolygon2.isClipped) {
+                        g2d.setColor(Color.RED);
+                        g2d.drawString("CLIPPED", 5, 24);
                     }
                 }
             }
@@ -157,25 +167,27 @@ public class PolygonRenderer {
                 int scanRight = scan.right;
                 Color4f colorLeft = scan.colorLeft;
                 Color4f colorRight = scan.colorRight;
-                int pixelLength;
+                int pixelLength = 1;
                 int scanLength = scanRight - scanLeft;
 
-                switch (scanLength - (scanLength % 50)) {
-                    case 0:
-                        pixelLength = 1;
-                        break;
-                    case 50:
-                        pixelLength = 2;
-                        break;
-                    case 100:
-                        pixelLength = 4;
-                        break;
-                    case 150:
-                        pixelLength = 8;
-                        break;
-                    default:
-                        pixelLength = 16;
-                        break;
+                if (adaptiveSmoothing) {
+                    switch (scanLength - (scanLength % 50)) {
+                        case 0:
+                            pixelLength = 1;
+                            break;
+                        case 50:
+                            pixelLength = 2;
+                            break;
+                        case 100:
+                            pixelLength = 4;
+                            break;
+                        case 150:
+                            pixelLength = 8;
+                            break;
+                        default:
+                            pixelLength = 16;
+                            break;
+                    }
                 }
 
                 for (int j = scanLeft; j <= scanRight; j += pixelLength) {
@@ -195,6 +207,8 @@ public class PolygonRenderer {
                         currentFragmentShader.fragmentColor = fragmentColor;
                         shaderFrontColor.setTo(fragmentColor);
                         shaderBackColor.setTo(fragmentColor);
+                        fragmentPosition.setTo(j, i, - 1);
+                        currentFragmentShader.position = fragmentPosition;
                         currentFragmentShader.frontColor = shaderFrontColor;
                         currentFragmentShader.backColor = shaderBackColor;
                         currentFragmentShader.shade();
@@ -273,5 +287,13 @@ public class PolygonRenderer {
 
     public void disableBackFaceCulling() {
         this.backFaceCulling = false;
+    }
+
+    public void enableAdaptiveSmoothing() {
+        this.adaptiveSmoothing = true;
+    }
+
+    public void disableAdaptiveSmoothing() {
+        this.adaptiveSmoothing = false;
     }
 }

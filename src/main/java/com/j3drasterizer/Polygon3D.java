@@ -209,6 +209,52 @@ public class Polygon3D {
 
         return vertNum >= 3;
     }
+    
+    public boolean clipFarPlane(float clipZ) {
+        if (clipZ == 0) {
+            clipZ = 1;
+        }
+        ensureCapacity(vertNum * 3);
+
+        boolean isCompletelyHidden = true;
+        for (int i = 0; i < vertNum; i++) {
+            int next = (i + 1) % vertNum;
+            Vector3D v1 = vertices[i];
+            Vector3D v2 = vertices[next];
+
+            if (v1.z > clipZ) {
+                isCompletelyHidden = false;
+            }
+
+            if (v1.z < v2.z) {
+                Vector3D temp = v1;
+                v1 = v2;
+                v2 = temp;
+            }
+
+            if (v1.z > clipZ && v2.z < clipZ) {
+                float scale = (clipZ - v1.z) / (v2.z - v1.z);
+                insertVertex(next,
+                        v1.x + scale * (v2.x - v1.x),
+                        v1.y + scale * (v2.y - v1.y),
+                        clipZ);
+                isClipped = true;
+                i++;
+            }
+        }
+
+        if (isCompletelyHidden) {
+            return false;
+        }
+
+        for (int i = vertNum - 1; i >= 0; i--) {
+            if (vertices[i].z < clipZ) {
+                deleteVertex(i);
+            }
+        }
+
+        return vertNum >= 3;
+    }
 
     protected void insertVertex(int index, float x, float y, float z) {
         Vector3D v = vertices[vertices.length - 1];

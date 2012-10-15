@@ -11,6 +11,7 @@ package com.j3drasterizer;
 public abstract class FragmentShader extends Shader {
 
     public Color4f frontColor, backColor, fragmentColor;
+    public Vector3D position;
     
     @Override
     public abstract void shade();
