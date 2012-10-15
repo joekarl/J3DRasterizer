@@ -16,4 +16,5 @@ public class FastMath {
             return (int) f;
         }
     }
+    
 }

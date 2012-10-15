@@ -16,6 +16,7 @@ import java.awt.image.BufferedImage;
 public class PolygonRenderer {
 
     private Polygon3D tPolygon;
+    private Polygon3D tPolygon2;
     private final ViewFrustum view;
     private Graphics2D g2d;
     private Color wireframeColor;
@@ -29,15 +30,16 @@ public class PolygonRenderer {
     private Transform3D cameraPosition;
     private ScanConverter scanConverter;
     private BufferedImage renderBuffer;
-    private Vector3D fragmentColor;
-    private Vector3D shaderFrontColor;
-    private Vector3D shaderBackColor;
-    private Vector3D shaderVertexColor;
-    private Vector3D defaultColor;
+    private Color4f fragmentColor;
+    private Color4f shaderFrontColor;
+    private Color4f shaderBackColor;
+    private Color4f shaderVertexColor;
+    private Color4f defaultColor;
 
     public PolygonRenderer(ViewFrustum view) {
         this.view = view;
-        tPolygon = new Polygon3D(new Vector3D(), new Vector3D(), new Vector3D());
+        tPolygon = new Polygon3D();
+        tPolygon2 = new Polygon3D();
         fill = true;
         wireframe = false;
         wireframeColor = Color.WHITE;
@@ -48,11 +50,11 @@ public class PolygonRenderer {
         scanConverter = new ScanConverter(view);
         renderBuffer = new BufferedImage(view.getLeftOffset() * 2 + view.getWidth(),
                 view.getTopOffset() * 2 + view.getHeight(), BufferedImage.TYPE_INT_ARGB);
-        fragmentColor = new Vector3D(1, 1, 1);
-        shaderFrontColor = new Vector3D(1, 1, 1);
-        shaderBackColor = new Vector3D(1, 1, 1);
-        shaderVertexColor = new Vector3D(1, 1, 1);
-        defaultColor = new Vector3D(1, 1, 1);
+        fragmentColor = new Color4f(1, 1, 1);
+        shaderFrontColor = new Color4f(1, 1, 1);
+        shaderBackColor = new Color4f(1, 1, 1);
+        shaderVertexColor = new Color4f(1, 1, 1);
+        defaultColor = new Color4f(1, 1, 1);
     }
 
     public void startFrame() {
@@ -61,16 +63,16 @@ public class PolygonRenderer {
         g2d.fillRect(0, 0, renderBuffer.getWidth(), renderBuffer.getHeight());
         defaultColor.setTo(1, 1, 1);
         if (shaderFrontColor == null) {
-            shaderFrontColor = new Vector3D(defaultColor);
+            shaderFrontColor = new Color4f(defaultColor);
         }
         if (shaderBackColor == null) {
-            shaderBackColor = new Vector3D(defaultColor);
+            shaderBackColor = new Color4f(defaultColor);
         }
         if (fragmentColor == null) {
-            fragmentColor = new Vector3D(defaultColor);
+            fragmentColor = new Color4f(defaultColor);
         }
         if (shaderVertexColor == null) {
-            shaderVertexColor = new Vector3D(defaultColor);
+            shaderVertexColor = new Color4f(defaultColor);
         }
     }
 
@@ -100,55 +102,77 @@ public class PolygonRenderer {
 
         if (!backFaceCulling || tPolygon.isFacing(cameraPosition.getLocation())) {
 
-            if (false || tPolygon.clipNearPlane(-1)) {
+            if (false || tPolygon.clipNearPlane(-200)) {
+
 
                 Polygon3D.projectPolygonWithView(tPolygon, view);
+                int subPolygonCount = 1;
+                if (tPolygon.getVertNum() > 3) {
+                    subPolygonCount = tPolygon.getVertNum() - 2;
+                }
+                for (int k = 0; k < subPolygonCount; k++) {
+                    tPolygon2.setTo(tPolygon, 0, 1 + k, 2 + k);
 
-                if (fill) {
-                    scanConverter.convert(tPolygon);
-                    for (int i = scanConverter.top; i <= scanConverter.bottom; i++) {
-                        ScanConverter.Scan scan = scanConverter.getScan(i);
-                        if (scan.isValid()) {
-                            for (int j = scan.left; j <= scan.right; j++) {
-                                if (scan.left != scan.right) {
-                                    float lerp = (float) (j - scan.left) / (float) (scan.right - scan.left);
-                                    Vector3D.lerp(scan.colorLeft, scan.colorRight,
-                                            lerp,
-                                            fragmentColor);
-                                } else {
-                                    fragmentColor.setTo(scan.colorLeft);
+                    if (fill) {
+                        scanConverter.convert(tPolygon2);
+                        for (int i = scanConverter.top; i <= scanConverter.bottom; i++) {
+                            ScanConverter.Scan scan = scanConverter.getScan(i);
+//                            for (int j = 0; j < tPolygon2.getVertNum(); j++) {
+//                                g2d.setColor(Color.GREEN);
+//                                g2d.drawString("" + j, tPolygon2.getVertex(j).x + 5, tPolygon2.getVertex(j).y + 15);
+//                            }
+                            if (scan.isValid()) {
+                                for (int j = scan.left; j <= scan.right; j++) {
+                                    //*
+                                    if (scan.left != scan.right) {
+                                        float lerp = (j - scan.left)
+                                                / (float) (scan.right - scan.left);
+                                        Color4f.lerp(scan.colorLeft, scan.colorRight,
+                                                lerp,
+                                                fragmentColor);
+                                    } else {
+                                        fragmentColor.setTo(scan.colorLeft);
+                                    }
+                                    if (enableFragmentShader) {
+                                        currentFragmentShader.fragmentColor = fragmentColor;
+                                        shaderFrontColor.setTo(fragmentColor);
+                                        shaderBackColor.setTo(fragmentColor);
+                                        currentFragmentShader.frontColor = shaderFrontColor;
+                                        currentFragmentShader.backColor = shaderBackColor;
+                                        currentFragmentShader.shade();
+                                        fragmentColor.setTo(currentFragmentShader.fragmentColor);
+                                    }
+
+                                    g2d.setColor(new Color(
+                                            fragmentColor.getR(),
+                                            fragmentColor.getG(),
+                                            fragmentColor.getB()));
+
+                                    //*/
+                                    g2d.drawLine(j, i, j, i);
                                 }
-                                if (enableFragmentShader) {
-                                    currentFragmentShader.fragmentColor = fragmentColor;
-                                    shaderFrontColor.setTo(fragmentColor);
-                                    shaderBackColor.setTo(fragmentColor);
-                                    currentFragmentShader.frontColor = shaderFrontColor;
-                                    currentFragmentShader.backColor = shaderBackColor;
-                                    currentFragmentShader.shade();
-                                    fragmentColor.setTo(currentFragmentShader.fragmentColor);
-                                }
-                                g2d.setColor(new Color(
-                                        fragmentColor.x,
-                                        fragmentColor.y,
-                                        fragmentColor.z));
-                                g2d.drawLine(j, i, j, i);
                             }
                         }
+
+                    }
+
+                    if (wireframe) {
+                        GeneralPath path = new GeneralPath();
+                        Vector3D v = tPolygon2.getVertex(0);
+                        path.moveTo(v.x, v.y);
+                        for (int i = 1; i < tPolygon2.getVertNum(); i++) {
+                            v = tPolygon2.getVertex(i);
+                            path.lineTo(v.x, v.y);
+                        }
+                        path.closePath();
+                        g2d.setColor(wireframeColor);
+                        g2d.draw(path);
                     }
                 }
 
-                if (wireframe) {
-                    GeneralPath path = new GeneralPath();
-                    Vector3D v = tPolygon.getVertex(0);
-                    path.moveTo(v.x, v.y);
-
-                    for (int i = 1; i < vertNum; i++) {
-                        v = tPolygon.getVertex(i);
-                        path.lineTo(v.x, v.y);
-                    }
-                    path.closePath();
-                    g2d.setColor(wireframeColor);
-                    g2d.draw(path);
+                if (tPolygon.isClipped) {
+                    g2d.setColor(Color.RED);
+                    g2d.drawString("CLIPPED", 5, 30);
                 }
             }
         }

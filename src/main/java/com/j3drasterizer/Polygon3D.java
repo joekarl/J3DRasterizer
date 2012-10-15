@@ -4,8 +4,7 @@
  */
 package com.j3drasterizer;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 /**
  *
@@ -17,20 +16,21 @@ import java.util.List;
 public class Polygon3D {
 
     private Vector3D[] vertices;
-    private Vector3D[] colors;
+    private Color4f[] colors;
     private int vertNum;
     private Vector3D normal;
     private static Vector3D tempV1 = new Vector3D();
     private static Vector3D tempV2 = new Vector3D();
+    public boolean isClipped;
 
     public Polygon3D(Vector3D... vertices) {
         vertNum = vertices.length;
         this.vertices = vertices;
         normal = new Vector3D();
         calcNormal();
-        colors = new Vector3D[vertNum];
+        colors = new Color4f[vertNum];
         for (int i = 0; i < vertNum; i++) {
-            colors[i] = new Vector3D(-1, -1, -1);
+            colors[i] = new Color4f(-1, -1, -1, -1);
         }
     }
 
@@ -45,18 +45,30 @@ public class Polygon3D {
             vertices[i].setTo(p.vertices[i]);
             colors[i].setTo(p.colors[i]);
         }
+        isClipped = false;
+        calcNormal();
+    }
+    
+    public void setTo(Polygon3D p, int ... verticeIndexes) {
+        vertNum = verticeIndexes.length;
+        ensureCapacity(vertNum);
+        for (int i = 0; i < vertNum; i++) {
+            vertices[i].setTo(p.vertices[verticeIndexes[i]]);
+            colors[i].setTo(p.colors[verticeIndexes[i]]);
+        }
+        isClipped = false;
         calcNormal();
     }
 
     protected void ensureCapacity(int capacity) {
         if (vertices.length < capacity) {
             Vector3D[] newVertices = new Vector3D[capacity];
-            Vector3D[] newColors = new Vector3D[capacity];
+            Color4f[] newColors = new Color4f[capacity];
             System.arraycopy(vertices, 0, newVertices, 0, vertices.length);
             System.arraycopy(colors, 0, newColors, 0, colors.length);
             for (int i = vertices.length; i < newVertices.length; i++) {
                 newVertices[i] = new Vector3D();
-                newColors[i] = new Vector3D(-1, -1, -1);
+                newColors[i] = new Color4f(-1, -1, -1, -1);
             }
             vertices = newVertices;
             colors = newColors;
@@ -103,7 +115,7 @@ public class Polygon3D {
         return vertices[index];
     }
 
-    public Vector3D getColor(int index) {
+    public Color4f getColor(int index) {
         return colors[index];
     }
 
@@ -115,6 +127,9 @@ public class Polygon3D {
     }
 
     public boolean clipNearPlane(float clipZ) {
+        if (clipZ == 0) {
+            clipZ = -1;
+        }
         ensureCapacity(vertNum * 3);
 
         boolean isCompletelyHidden = true;
@@ -139,6 +154,7 @@ public class Polygon3D {
                         v1.x + scale * (v2.x - v1.x),
                         v1.y + scale * (v2.y - v1.y),
                         clipZ);
+                isClipped = true;
                 i++;
             }
         }
@@ -158,7 +174,7 @@ public class Polygon3D {
 
     protected void insertVertex(int index, float x, float y, float z) {
         Vector3D v = vertices[vertices.length - 1];
-        Vector3D newColor = colors[colors.length - 1];
+        Color4f newColor = colors[colors.length - 1];
         v.x = x;
         v.y = y;
         v.z = z;
@@ -185,18 +201,18 @@ public class Polygon3D {
 
         Vector3D v1 = vertices[vert1];
         Vector3D v2 = vertices[vert2];
-        Vector3D color1 = colors[vert1];
-        Vector3D color2 = colors[vert2];
+        Color4f color1 = colors[vert1];
+        Color4f color2 = colors[vert2];
 
         float lerp = (y - v1.y) / (v2.y - v1.y);
-        Vector3D.lerp(color1, color2, lerp, newColor);
+        Color4f.lerp(color1, color2, lerp, newColor);
 
         colors[index] = newColor;
     }
 
     protected void deleteVertex(int index) {
         Vector3D v = vertices[index];
-        Vector3D color = colors[index];
+        Color4f color = colors[index];
         for (int i = index; i < vertices.length - 1; i++) {
             vertices[i] = vertices[1 + i];
             colors[i] = colors[1 + i];
@@ -206,7 +222,49 @@ public class Polygon3D {
         vertNum--;
     }
 
-    Vector3D[] getColors() {
+    Color4f[] getColors() {
         return colors;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 17 * hash + Arrays.deepHashCode(this.vertices);
+        hash = 17 * hash + Arrays.deepHashCode(this.colors);
+        hash = 17 * hash + this.vertNum;
+        hash = 17 * hash + (this.normal != null ? this.normal.hashCode() : 0);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Polygon3D other = (Polygon3D) obj;
+        if (!Arrays.deepEquals(this.vertices, other.vertices)) {
+            return false;
+        }
+        if (!Arrays.deepEquals(this.colors, other.colors)) {
+            return false;
+        }
+        if (this.vertNum != other.vertNum) {
+            return false;
+        }
+        if (this.normal != other.normal && (this.normal == null
+                || !this.normal.equals(other.normal))) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return "Polygon3D{" + "vertices=" + Arrays.toString(vertices)
+                + ", colors=" + colors + ", vertNum=" + vertNum
+                + ", normal=" + normal + ", isClipped=" + isClipped + '}';
     }
 }

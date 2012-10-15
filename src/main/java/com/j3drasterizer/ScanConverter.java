@@ -21,8 +21,8 @@ public class ScanConverter {
 
         public int left;
         public int right;
-        public Vector3D colorLeft = new Vector3D(1, 1, 1),
-                colorRight = new Vector3D(1, 1, 1);
+        public Color4f colorLeft = new Color4f(),
+                colorRight = new Color4f();
 
         /**
          * Sets the left and right boundary for this scan if the x value is
@@ -68,7 +68,7 @@ public class ScanConverter {
         public boolean equals(int left, int right) {
             return (this.left == left && this.right == right);
         }
-        
+
         public int width() {
             return this.right - this.left;
         }
@@ -132,12 +132,12 @@ public class ScanConverter {
         bottom = Integer.MIN_VALUE;
     }
 
-    private boolean colorInRange(Vector3D color) {
-        return color.x != -1
-                    && color.y != -1
-                    && color.z != -1;
+    private boolean colorInRange(Color4f color) {
+        return color.getR() != -1
+                && color.getG() != -1
+                && color.getB() != -1;
     }
-    
+
     /**
      * Scan-converts a projected polygon. Returns true if the polygon is visible
      * in the view window.
@@ -162,19 +162,19 @@ public class ScanConverter {
                 v2 = polygon.getVertex(i + 1);
             }
 
-            Vector3D color1, color2;
+            Color4f color1, color2;
             boolean calcColors = true;
-            
-            Vector3D[] colors = polygon.getColors();
+
+            Color4f[] colors = polygon.getColors();
             if (colors == null) {
                 throw new IllegalStateException();
             }
-            
-            Vector3D defaultColor = colors[0];
+
+            Color4f defaultColor = colors[0];
             if (!colorInRange(defaultColor)) {
                 defaultColor.setTo(1, 1, 1);
             }
-            
+
             if (i < colors.length && i < polygon.getVertNum()) {
                 color1 = colors[i];
                 if (!colorInRange(color1)) {
@@ -183,7 +183,7 @@ public class ScanConverter {
             } else {
                 color1 = defaultColor;
             }
-           
+
             if (i <= colors.length + 1 && i + 1 < polygon.getVertNum()) {
                 color2 = colors[i + 1];
                 if (!colorInRange(color2)) {
@@ -198,9 +198,9 @@ public class ScanConverter {
                 Vector3D temp = v1;
                 v1 = v2;
                 v2 = temp;
-                temp = color1;
+                Color4f tempColor = color1;
                 color1 = color2;
-                color2 = temp;
+                color2 = tempColor;
             }
             float dy = v2.y - v1.y;
             float dx = v2.x - v1.x;
@@ -223,20 +223,16 @@ public class ScanConverter {
                 for (int y = startY; y <= endY; y++) {
                     scans[y].setBoundary(x);
 
-                    if (calcColors) {
-                        Vector3D colorLeft = scans[y].colorLeft;
-                        Vector3D colorRight = scans[y].colorRight;
-                        float lerp = (y - v1.y) / (v2.y - v1.y);
-                        Vector3D.lerp(color1, color2, lerp, colorLeft);
-                        Vector3D.lerp(color1, color2, lerp, colorRight);
-                    }
+                    calcColors(calcColors, y, v1.y, v2.y, x,
+                            color1, color2, scans);
                 }
             } else {
+
+                /*
                 // scan-convert this edge (line equation)
                 float gradient = dx / dy;
 
                 // (slower version)
-                //*
                 for (int y = startY; y <= endY; y++) {
                     int x = FastMath.ceilToInt(v1.x + (y - v1.y) * gradient);
                     // ensure x within view bounds
@@ -244,19 +240,8 @@ public class ScanConverter {
 
                     scans[y].setBoundary(x);
 
-                    if (calcColors) {
-                        Vector3D colorLeft = scans[y].colorLeft;
-                        Vector3D colorRight = scans[y].colorRight;
-
-                        float lerp = (y - v1.y) / (v2.y - v1.y);
-
-                        if (scans[y].left == x) {
-                            Vector3D.lerp(color1, color2, lerp, colorLeft);
-                        }
-                        if (scans[y].right == x - 1) {
-                            Vector3D.lerp(color1, color2, lerp, colorRight);
-                        }
-                    }
+                    calcColors(calcColors, y, v1.y, v2.y, x,
+                            color1, color2, scans);
                 }
                 //*/
 
@@ -271,6 +256,7 @@ public class ScanConverter {
                  while (startY <= yInt) {
                  scans[startY].setBoundary(minX);
                  startY++;
+                 calcColors(calcColors, startY - 1, v1.y, v2.y, minX, color1, color2, scans);
                  }
                  } else if (startX > maxX) {
                  int yInt = (int) (v1.y + (maxX - v1.x)
@@ -279,6 +265,7 @@ public class ScanConverter {
                  while (startY <= yInt) {
                  scans[startY].setBoundary(maxX + 1);
                  startY++;
+                 calcColors(calcColors, startY - 1, v1.y, v2.y, maxX + 1, color1, color2, scans);
                  }
                  }
 
@@ -295,6 +282,7 @@ public class ScanConverter {
                  while (endY >= yInt) {
                  scans[endY].setBoundary(minX);
                  endY--;
+                 calcColors(calcColors, endY + 1, v1.y, v2.y, minX, color1, color2, scans);
                  }
                  } else if (endX > maxX) {
                  int yInt = FastMath.ceilToInt(v1.y + (maxX - v1.x)
@@ -303,20 +291,25 @@ public class ScanConverter {
                  while (endY >= yInt) {
                  scans[endY].setBoundary(maxX + 1);
                  endY--;
+                 calcColors(calcColors, endY + 1, v1.y, v2.y, maxX + 1, color1, color2, scans);
                  }
                  }
 
                  if (startY > endY) {
                  continue;
                  }
+                 //*/
 
-                 // line equation using integers
+                // line equation using integers
+                //*
                  int xScaled = (int) (SCALE * v1.x
                  + SCALE * (startY - v1.y) * dx / dy) + SCALE_MASK;
                  int dxScaled = (int) (dx * SCALE / dy);
 
                  for (int y = startY; y <= endY; y++) {
                  scans[y].setBoundary(xScaled >> SCALE_BITS);
+                 calcColors(calcColors, y, v1.y, v2.y, xScaled >> SCALE_BITS,
+                 color1, color2, scans);
                  xScaled += dxScaled;
                  }
                  //*/
@@ -330,5 +323,24 @@ public class ScanConverter {
             }
         }
         return false;
+    }
+
+    private void calcColors(boolean calcColors, int y, float y1, float y2,
+            int x,
+            Color4f color1, Color4f color2,
+            Scan[] scans) {
+        if (calcColors) {
+            Color4f colorLeft = scans[y].colorLeft;
+            Color4f colorRight = scans[y].colorRight;
+
+            float lerp = (y - y1) / (y2 - y1);
+
+            if (scans[y].left == x) {
+                Color4f.lerp(color1, color2, lerp, colorLeft);
+            }
+            if (scans[y].right == x - 1) {
+                Color4f.lerp(color1, color2, lerp, colorRight);
+            }
+        }
     }
 }

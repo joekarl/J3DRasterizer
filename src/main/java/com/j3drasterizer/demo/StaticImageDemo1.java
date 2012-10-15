@@ -30,7 +30,7 @@ import javax.swing.JPanel;
  */
 public class StaticImageDemo1 {
 
-    float zDepth = -500;
+    float zDepth = 0;
 
     public StaticImageDemo1() {
         JFrame frame = new JFrame("Static Image Demo 1");
@@ -46,7 +46,7 @@ public class StaticImageDemo1 {
         final Polygon3D leaves = new Polygon3D(
                 new Vector3D(-50, -35, 0),
                 new Vector3D(50, -35, 0),
-                new Vector3D(0, 150, 0));
+                new Vector3D(0, 100, 0));
         leaves.getColor(0).setTo(1, 0, 0);
         leaves.getColor(1).setTo(0, 1, 0);
         leaves.getColor(2).setTo(0, 0, 1);
@@ -56,9 +56,9 @@ public class StaticImageDemo1 {
                 new Vector3D(5, -50, 0),
                 new Vector3D(5, -35, 0),
                 new Vector3D(-5, -35, 0));
-        trunk.getColor(0).setTo(1, 0, 0);
+        trunk.getColor(0).setTo(1, 0.5f, 0);
 
-        final Transform3D transform1 = new Transform3D(0, 0, zDepth);
+        final Transform3D transform1 = new Transform3D(0, 0, -220);
 
         final PolygonRenderer polyRenderer = new PolygonRenderer(view);
 
@@ -70,7 +70,7 @@ public class StaticImageDemo1 {
         polyRenderer.setFragmentShader(fragmentShader);
 
         //polyRenderer.disableFill();
-        //polyRenderer.enableWireframe();
+        polyRenderer.enableWireframe();
         polyRenderer.disableBackFaceCulling();
 
         final JPanel panel = new JPanel() {
@@ -90,12 +90,12 @@ public class StaticImageDemo1 {
                 polyRenderer.rasterize(leaves);
 
                 polyRenderer.enableFragmentShader();
-                polyRenderer.rasterize(trunk);
+                //polyRenderer.rasterize(trunk);
 
                 g2d.drawImage(polyRenderer.endFrame(), 0, 0, null);
 
                 g2d.setColor(Color.WHITE);
-                g2d.drawString(String.format("FPS %f", fpsCounter.getCountsPerSecond()), 10, 10);
+                g2d.drawString(String.format("FPS %f", fpsCounter.getCountsPerSecond()), 5, 15);
             }
         };
 
@@ -105,9 +105,9 @@ public class StaticImageDemo1 {
                     float multiplier = 0.3f;
                     //transform.rotateAngleZ((float) Math.toRadians(5 * multiplier));
                     //transform.rotateAngleX((float) Math.toRadians(2 * multiplier));
-                    transform1.rotateAngleY((float) Math.toRadians(8 * multiplier));
+                    transform1.rotateAngleY((float) Math.toRadians(1 * multiplier));
 
-                    transform1.getLocation().z = zDepth;
+                    polyRenderer.getCameraPosition().getLocation().z = -zDepth;
 
                     try {
                         Thread.sleep(10);
@@ -125,7 +125,8 @@ public class StaticImageDemo1 {
                     try {
                         Thread.sleep(1);
                     } catch (InterruptedException ex) {
-                        Logger.getLogger(StaticImageDemo1.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(StaticImageDemo1.class.getName())
+                                .log(Level.SEVERE, null, ex);
                     }
                 }
             }
@@ -146,9 +147,9 @@ public class StaticImageDemo1 {
 
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_UP) {
-                    zDepth += 50;
+                    zDepth += 10;
                 } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-                    zDepth -= 50;
+                    zDepth -= 10;
                 }
             }
 
@@ -177,7 +178,7 @@ public class StaticImageDemo1 {
     private static class FragShader extends FragmentShader {
 
         public void shade() {
-            fragmentColor.setTo(0, 1, 0);
+            //fragmentColor.setTo(0, 255, 0);
         }
     }
 }
