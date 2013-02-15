@@ -6,9 +6,10 @@ package com.j3drasterizer;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.geom.GeneralPath;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferFloat;
+import java.awt.image.DataBufferInt;
 
 /**
  *
@@ -38,6 +39,8 @@ public class PolygonRenderer {
     private Color4f shaderVertexColor;
     private Color4f defaultColor;
     private Vector3D fragmentPosition;
+    int[] renderBufferRaster;
+    int renderableHeight, renderableWidth;
 
     public PolygonRenderer(ViewFrustum view) {
         this.view = view;
@@ -52,20 +55,28 @@ public class PolygonRenderer {
         backFaceCulling = true;
         cameraPosition = new Transform3D();
         scanConverter = new ScanConverter(view);
-        renderBuffer = new BufferedImage(view.getLeftOffset() * 2 + view.getWidth(),
-                view.getTopOffset() * 2 + view.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        renderableWidth = view.getLeftOffset() * 2 + view.getWidth();
+        renderableHeight = view.getTopOffset() * 2 + view.getHeight();
+        renderBuffer = new BufferedImage(renderableWidth, renderableHeight, BufferedImage.TYPE_INT_RGB);
         fragmentColor = new Color4f(1, 1, 1);
         shaderFrontColor = new Color4f(1, 1, 1);
         shaderBackColor = new Color4f(1, 1, 1);
         shaderVertexColor = new Color4f(1, 1, 1);
         defaultColor = new Color4f(1, 1, 1);
         fragmentPosition = new Vector3D();
+        renderBufferRaster = ((DataBufferInt) renderBuffer.getRaster().getDataBuffer()).getData();
+        g2d = (Graphics2D) renderBuffer.getGraphics();
     }
 
     public void startFrame() {
-        this.g2d = (Graphics2D) renderBuffer.getGraphics();
-        g2d.setColor(Color.black);
-        g2d.fillRect(0, 0, renderBuffer.getWidth(), renderBuffer.getHeight());
+        
+
+        for (int y = 0; y < renderableHeight; ++y) {
+            for (int x = 0; x < renderableWidth; ++x) {
+                renderBufferRaster[y * renderableWidth + x] = 0;
+            }
+        }
+
         defaultColor.setTo(1, 1, 1);
         if (shaderFrontColor == null) {
             shaderFrontColor = new Color4f(defaultColor);
@@ -82,7 +93,6 @@ public class PolygonRenderer {
     }
 
     public BufferedImage endFrame() {
-        g2d = null;
         return renderBuffer;
     }
 
@@ -215,18 +225,27 @@ public class PolygonRenderer {
                         fragmentColor.setTo(currentFragmentShader.fragmentColor);
                     }
 
-                    g2d.setColor(new Color(
-                            fragmentColor.getR(),
-                            fragmentColor.getG(),
-                            fragmentColor.getB()));
+//                    g2d.setColor(new Color(
+//                                fragmentColor.getR(),
+//                                fragmentColor.getG(),
+//                                fragmentColor.getB()));
 
                     int drawLength = pixelLength;
                     if (scanRight - j < pixelLength && scanRight != scanLeft) {
                         drawLength = scanRight - j;
                     }
 
-                    if (drawLength != 0 || pixelLength == 1) {
-                        g2d.drawLine(j, i, j + drawLength - 1, i);
+                    if ((drawLength != 0 || pixelLength == 1)) {
+                        int x = j > 0 ? j : 0;
+                        int end = (j + drawLength) <= renderableWidth ? j + drawLength : renderableWidth;
+                        
+                        for (; x < end; ++x) {
+                            int r = (int) (fragmentColor.getR() * 255f);
+                            int g = (int) (fragmentColor.getG() * 255f);
+                            int b = (int) (fragmentColor.getB() * 255f);
+                            renderBufferRaster[i * renderableWidth + x] =
+                                    r << 16 | g << 8 | b;
+                        }
                     }
                 }
             }

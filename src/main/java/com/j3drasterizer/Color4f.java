@@ -4,7 +4,11 @@
  */
 package com.j3drasterizer;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import sun.misc.Unsafe;
 
 /**
  *
@@ -12,7 +16,26 @@ import java.util.Arrays;
  */
 public final class Color4f {
 
-    private float[] rgba = new float[4];
+    private static Unsafe getUnsafe() {
+        try {
+            Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            return (Unsafe) unsafeField.get(null);
+        } catch (NoSuchFieldException ex) {
+            Logger.getLogger(Color4f.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SecurityException ex) {
+            Logger.getLogger(Color4f.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalArgumentException ex) {
+            Logger.getLogger(Color4f.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalAccessException ex) {
+            Logger.getLogger(Color4f.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+    private static final Unsafe unsafe = getUnsafe();
+    protected float[] rgba = new float[4];
+    private final long FLOAT_SIZE = 4L;
+    private final long FLOAT_ARRAY_OFFSET = unsafe.arrayBaseOffset(float[].class);
 
     public Color4f(float r, float g, float b, float a) {
         rgba[0] = r;
@@ -35,11 +58,12 @@ public final class Color4f {
     }
 
     public Color4f setTo(Color4f c) {
-        rgba[0] = c.getR();
-        rgba[1] = c.getG();
-        rgba[2] = c.getB();
-        rgba[3] = c.getA();
-        return this;
+        return setTo(
+                unsafe.getFloat(c.rgba, FLOAT_ARRAY_OFFSET),
+                unsafe.getFloat(c.rgba, 1L * FLOAT_SIZE + FLOAT_ARRAY_OFFSET),
+                unsafe.getFloat(c.rgba, 2L * FLOAT_SIZE + FLOAT_ARRAY_OFFSET),
+                unsafe.getFloat(c.rgba, 3L * FLOAT_SIZE + FLOAT_ARRAY_OFFSET));
+        //return setTo(c.getR(),c.getG(),c.getB(),c.getA());
     }
 
     public Color4f setTo(float r, float g, float b) {
@@ -47,35 +71,36 @@ public final class Color4f {
     }
 
     public Color4f setTo(float r, float g, float b, float a) {
-        rgba[0] = r;
-        rgba[1] = g;
-        rgba[2] = b;
-        rgba[3] = a;
+        unsafe.putFloat(rgba, FLOAT_ARRAY_OFFSET, r);
+        unsafe.putFloat(rgba, 1L * FLOAT_SIZE + FLOAT_ARRAY_OFFSET, g);
+        unsafe.putFloat(rgba, 2L * FLOAT_SIZE + FLOAT_ARRAY_OFFSET, b);
+        unsafe.putFloat(rgba, 3L * FLOAT_SIZE + FLOAT_ARRAY_OFFSET, a);
         return this;
     }
 
     public float getR() {
-        return rgba[0];
+        return unsafe.getFloat(rgba, FLOAT_ARRAY_OFFSET);
     }
 
     public float getG() {
-        return rgba[1];
+        return unsafe.getFloat(rgba, 1L * FLOAT_SIZE + FLOAT_ARRAY_OFFSET);
     }
 
     public float getB() {
-        return rgba[2];
+        return unsafe.getFloat(rgba, 2L * FLOAT_SIZE + FLOAT_ARRAY_OFFSET);
     }
 
     public float getA() {
-        return rgba[3];
+        return unsafe.getFloat(rgba, 3L * FLOAT_SIZE + FLOAT_ARRAY_OFFSET);
     }
 
     public void clamp() {
-        for (int i = 0; i < 4; i++) {
-            if (rgba[i] > 255) {
-                rgba[i] = 255;
-            } else if (rgba[i] < 0) {
-                rgba[i] = 0;
+        for (long i = 0L; i < 4L; i++) {
+            float x = unsafe.getFloat(rgba, i);
+            if (x > 255f) {
+                unsafe.putFloat(rgba, i * FLOAT_SIZE + FLOAT_ARRAY_OFFSET, 255f);
+            } else if (x < 0f) {
+                unsafe.putFloat(rgba, i * FLOAT_SIZE + FLOAT_ARRAY_OFFSET, 0f);
             }
         }
     }
@@ -86,6 +111,7 @@ public final class Color4f {
                 (c2.getG() - c1.getG()) * lerp + c1.getG(),
                 (c2.getB() - c1.getB()) * lerp + c1.getB(),
                 (c2.getA() - c1.getA()) * lerp + c1.getA());
+        
         destination.clamp();
     }
 

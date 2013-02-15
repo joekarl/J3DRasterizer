@@ -38,7 +38,7 @@ public class StaticImageDemo1 {
 
         final TimeCounter fpsCounter = new TimeCounter();
 
-        final int width = 640, height = 480;
+        final int width = 1024, height = 768;
 
         final ViewFrustum view = new ViewFrustum(0, 0, width, height,
                 (float) Math.toRadians(75), -1, -2000);
@@ -48,9 +48,9 @@ public class StaticImageDemo1 {
                 new Vector3D(0, 100, 0).multiply(scale),
                 new Vector3D(-50, -35, 0).multiply(scale),
                 new Vector3D(50, -35, 0).multiply(scale));
-        leaves.getColor(0).setTo(1, 0, 1);
-        leaves.getColor(1).setTo(0, 1, 1);
-        leaves.getColor(2).setTo(1, 0.5f, 0);
+        leaves.getColor(0).setTo(1, 0, 0);
+        leaves.getColor(1).setTo(0, 1, 0);
+        leaves.getColor(2).setTo(0, 0, 1);
 
         final Polygon3D trunk = new Polygon3D(
                 new Vector3D(-5, -50, 0).multiply(scale),
@@ -59,7 +59,7 @@ public class StaticImageDemo1 {
                 new Vector3D(-5, -35, 0).multiply(scale));
         trunk.getColor(0).setTo(1, 0.5f, 0);
 
-        final Transform3D transform1 = new Transform3D(0, 0, -220);
+        final Transform3D transform1 = new Transform3D(0, 0, -420);
         transform1.setAngleY((float) Math.toRadians(45));
 
         final PolygonRenderer polyRenderer = new PolygonRenderer(view);
@@ -72,7 +72,7 @@ public class StaticImageDemo1 {
         polyRenderer.setFragmentShader(fragmentShader);
 
         //polyRenderer.disableFill();
-        //polyRenderer.enableWireframe();
+        polyRenderer.enableWireframe();
         polyRenderer.disableBackFaceCulling();
         //polyRenderer.disableAdaptiveSmoothing();
 
@@ -82,13 +82,12 @@ public class StaticImageDemo1 {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g;
-                g2d.setColor(Color.BLACK);
-                g2d.fillRect(0, 0, width, height);
 
                 polyRenderer.startFrame();
                 fpsCounter.tick();
+                Transform3D transform = (Transform3D) transform1.clone();
 
-                transformShader.worldTransform = transform1;
+                transformShader.worldTransform = transform;
                 polyRenderer.enableFragmentShader();
                 polyRenderer.rasterize(leaves);
 
@@ -96,6 +95,7 @@ public class StaticImageDemo1 {
                 polyRenderer.rasterize(trunk);
 
                 g2d.drawImage(polyRenderer.endFrame(), 0, 0, null);
+
 
                 g2d.setColor(Color.WHITE);
                 g2d.drawString(String.format("FPS %f", fpsCounter.getCountsPerSecond()), 5, 15);
