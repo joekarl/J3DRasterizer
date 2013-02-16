@@ -43,8 +43,8 @@ public class ScanConverter {
         public void clear() {
             left = Integer.MAX_VALUE;
             right = Integer.MIN_VALUE;
-            colorLeft.setTo(1, 1, 1);
-            colorRight.setTo(1, 1, 1);
+            //colorLeft.setTo(1, 1, 1);
+            //colorRight.setTo(1, 1, 1);
         }
 
         /**
@@ -133,9 +133,9 @@ public class ScanConverter {
     }
 
     private boolean colorInRange(Color4f color) {
-        return color.getR() != -1
-                && color.getG() != -1
-                && color.getB() != -1;
+        return color.r != -1
+                && color.g != -1
+                && color.b != -1;
     }
 
     /**
@@ -174,7 +174,7 @@ public class ScanConverter {
 
                 Color4f defaultColor = colors[0];
                 if (!colorInRange(defaultColor)) {
-                    defaultColor.setTo(1, 1, 1);
+                    //defaultColor.setTo(1, 1, 1);
                 }
 
                 if (i < colors.length && i < polygon.getVertNum()) {

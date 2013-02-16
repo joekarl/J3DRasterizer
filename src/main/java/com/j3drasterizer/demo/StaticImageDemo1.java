@@ -50,7 +50,7 @@ public class StaticImageDemo1 {
                 new Vector3D(50, -35, 0).multiply(scale));
         leaves.getColor(0).setTo(1, 0, 0);
         leaves.getColor(1).setTo(0, 1, 0);
-        leaves.getColor(2).setTo(0, 0, 1);
+        leaves.getColor(2).setTo(0, 0, 1, 0);
 
         final Polygon3D trunk = new Polygon3D(
                 new Vector3D(-5, -50, 0).multiply(scale),
@@ -70,18 +70,22 @@ public class StaticImageDemo1 {
 
         final FragShader fragmentShader = new FragShader();
         polyRenderer.setFragmentShader(fragmentShader);
+        polyRenderer.disableFragmentShader();
 
         //polyRenderer.disableFill();
-        polyRenderer.enableWireframe();
+        //polyRenderer.enableWireframe();
         polyRenderer.disableBackFaceCulling();
         //polyRenderer.disableAdaptiveSmoothing();
 
         final JPanel panel = new JPanel() {
-            BufferedImage buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            BufferedImage buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g;
+                
+                //g2d.setColor(Color.yellow);
+                //g2d.fillRect(0, 0, width, height);
 
                 polyRenderer.startFrame();
                 fpsCounter.tick();
@@ -96,10 +100,12 @@ public class StaticImageDemo1 {
 
                 g2d.drawImage(polyRenderer.endFrame(), 0, 0, null);
 
+                g2d.setColor(Color.BLACK);
+                g2d.drawString(String.format("FPS %f", fpsCounter.getCountsPerSecond()), 5, 17);
 
                 g2d.setColor(Color.WHITE);
                 g2d.drawString(String.format("FPS %f", fpsCounter.getCountsPerSecond()), 5, 15);
-
+                
                 this.repaint();
             }
         };

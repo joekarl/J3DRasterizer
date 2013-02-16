@@ -8,7 +8,6 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.GeneralPath;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferFloat;
 import java.awt.image.DataBufferInt;
 
 /**
@@ -41,6 +40,7 @@ public class PolygonRenderer {
     private Vector3D fragmentPosition;
     int[] renderBufferRaster;
     int renderableHeight, renderableWidth;
+    int polygonCount;
 
     public PolygonRenderer(ViewFrustum view) {
         this.view = view;
@@ -57,7 +57,7 @@ public class PolygonRenderer {
         scanConverter = new ScanConverter(view);
         renderableWidth = view.getLeftOffset() * 2 + view.getWidth();
         renderableHeight = view.getTopOffset() * 2 + view.getHeight();
-        renderBuffer = new BufferedImage(renderableWidth, renderableHeight, BufferedImage.TYPE_INT_RGB);
+        renderBuffer = new BufferedImage(renderableWidth, renderableHeight, BufferedImage.TYPE_INT_ARGB);
         fragmentColor = new Color4f(1, 1, 1);
         shaderFrontColor = new Color4f(1, 1, 1);
         shaderBackColor = new Color4f(1, 1, 1);
@@ -69,15 +69,14 @@ public class PolygonRenderer {
     }
 
     public void startFrame() {
-        
+        polygonCount = 0;
 
         for (int y = 0; y < renderableHeight; ++y) {
             for (int x = 0; x < renderableWidth; ++x) {
-                renderBufferRaster[y * renderableWidth + x] = 0;
+                renderBufferRaster[y * renderableWidth + x] = 0xFF000000;
             }
         }
 
-        defaultColor.setTo(1, 1, 1);
         if (shaderFrontColor == null) {
             shaderFrontColor = new Color4f(defaultColor);
         }
@@ -93,6 +92,8 @@ public class PolygonRenderer {
     }
 
     public BufferedImage endFrame() {
+        g2d.setColor(Color.BLUE);
+        g2d.drawString(String.format("Polygons : %d", polygonCount), 5, 45);
         return renderBuffer;
     }
 
@@ -101,17 +102,27 @@ public class PolygonRenderer {
 
         int vertNum = tPolygon.getVertNum();
 
-        if (currentVertexShader != null) {
-            for (int i = 0; i < vertNum; i++) {
+        for (int i = 0; i < vertNum; i++) {
+            if (currentVertexShader != null && enableVertexShader) {
                 currentVertexShader.inVertex = tPolygon.getVertex(i);
-                shaderVertexColor.setTo(p.getColor(i));
+                Color4f vertColor = p.getColor(i);
+                shaderVertexColor.setTo(vertColor.r, vertColor.g,
+                        vertColor.b, vertColor.a);
                 currentVertexShader.inColor = shaderVertexColor;
                 currentVertexShader.outColor = currentVertexShader.inColor;
                 currentVertexShader.shade();
                 currentVertexShader.outVertex.subtract(cameraPosition.getLocation());
-                tPolygon.getColor(i).setTo(currentVertexShader.outColor);
+                tPolygon.getColor(i).setTo(currentVertexShader.outColor.r,
+                        currentVertexShader.outColor.g,
+                        currentVertexShader.outColor.b,
+                        currentVertexShader.outColor.a);
+            } else {
+                tPolygon.getVertex(i).subtract(cameraPosition.getLocation());
             }
         }
+
+
+
 
         tPolygon.calcNormal();
 
@@ -145,110 +156,113 @@ public class PolygonRenderer {
                         g2d.draw(path);
                     }
 
-                    if (tPolygon2.isClipped) {
+                    if (tPolygon.isClipped) {
                         g2d.setColor(Color.RED);
-                        g2d.drawString("CLIPPED", 5, 24);
+                        g2d.drawString("CLIPPED", 5, 30);
                     }
+                    
+                    polygonCount++;
                 }
             }
-        }
-    }
-
-    private void shadeFragment(Color4f fragmentColor) {
-        if (enableFragmentShader) {
-            currentFragmentShader.fragmentColor = fragmentColor;
-            shaderFrontColor.setTo(fragmentColor);
-            shaderBackColor.setTo(fragmentColor);
-            currentFragmentShader.frontColor = shaderFrontColor;
-            currentFragmentShader.backColor = shaderBackColor;
-            currentFragmentShader.shade();
-            fragmentColor.setTo(currentFragmentShader.fragmentColor);
         }
     }
 
     private void fillPolygon(Polygon3D p) {
-        scanConverter.convert(tPolygon2);
+        scanConverter.convert(p);
         int scanTop = scanConverter.top;
         int scanBottom = scanConverter.bottom;
+        boolean isColored = p.isColored();
+        boolean isSolidColored = p.isSolidColored();
+        Color4f solidColor = p.getSolidColor();
         for (int i = scanTop; i <= scanBottom; i++) {
             ScanConverter.Scan scan = scanConverter.getScan(i);
-            if (scan.isValid()) {
-                int scanLeft = scan.left;
-                int scanRight = scan.right;
-                Color4f colorLeft = scan.colorLeft;
-                Color4f colorRight = scan.colorRight;
-                int pixelLength = 1;
-                int scanLength = scanRight - scanLeft;
+            drawScan(scan, i, isColored, isSolidColored, solidColor);
+        }
+    }
 
-                if (adaptiveSmoothing) {
-                    switch (scanLength - (scanLength % 50)) {
-                        case 0:
-                            pixelLength = 1;
-                            break;
-                        case 50:
-                            pixelLength = 2;
-                            break;
-                        case 100:
-                            pixelLength = 4;
-                            break;
-                        case 150:
-                            pixelLength = 8;
-                            break;
-                        default:
-                            pixelLength = 16;
-                            break;
-                    }
+    private void drawScan(ScanConverter.Scan scan, int scanNumber,
+            boolean isColored, boolean isSolidColored,
+            Color4f solidColor) {
+        if (scan.isValid()) {
+            int scanLeft = scan.left;
+            int scanRight = scan.right;
+            Color4f colorLeft = scan.colorLeft;
+            Color4f colorRight = scan.colorRight;
+            int pixelLength = 1;
+            int scanLength = scanRight - scanLeft;
+
+            if (adaptiveSmoothing) {
+                switch (scanLength - (scanLength % 50)) {
+                    case 0:
+                        pixelLength = 1;
+                        break;
+                    case 50:
+                        pixelLength = 2;
+                        break;
+                    case 100:
+                        pixelLength = 4;
+                        break;
+                    case 150:
+                        pixelLength = 8;
+                        break;
+                    default:
+                        pixelLength = 16;
+                        break;
+                }
+            }
+
+            for (int j = scanLeft; j <= scanRight; j += pixelLength) {
+                if (scanLeft != scanRight && isColored && !isSolidColored) {
+                    float lerp = (j - scanLeft)
+                            / (float) (scanRight - scanLeft);
+                    Color4f.lerp(colorLeft, colorRight,
+                            lerp,
+                            fragmentColor);
+                } else if (isSolidColored) {
+                    fragmentColor.setTo(solidColor.r, solidColor.g,
+                            solidColor.b, solidColor.a);
+                } else {
+                    fragmentColor.setTo(colorLeft.r, colorLeft.g,
+                            colorLeft.b, colorLeft.a);
                 }
 
-                for (int j = scanLeft; j <= scanRight; j += pixelLength) {
-                    if (scan.left != scan.right && tPolygon2.isColored() && !tPolygon2.isSolidColored()) {
-                        float lerp = (j - scan.left)
-                                / (float) (scan.right - scan.left);
-                        Color4f.lerp(scan.colorLeft, scan.colorRight,
-                                lerp,
-                                fragmentColor);
-                    } else if (tPolygon2.isSolidColored()) {
-                        fragmentColor.setTo(tPolygon2.getSolidColor());
-                    } else {
-                        fragmentColor.setTo(colorLeft);
-                    }
+                if (enableFragmentShader) {
+                    currentFragmentShader.fragmentColor = fragmentColor;
+                    shaderFrontColor.setTo(fragmentColor.r, fragmentColor.g,
+                            fragmentColor.b, fragmentColor.a);
+                    shaderBackColor.setTo(fragmentColor.r, fragmentColor.g,
+                            fragmentColor.b, fragmentColor.a);
+                    fragmentPosition.setTo(j, scanNumber, - 1);
+                    currentFragmentShader.position = fragmentPosition;
+                    currentFragmentShader.frontColor = shaderFrontColor;
+                    currentFragmentShader.backColor = shaderBackColor;
+                    currentFragmentShader.shade();
+                    fragmentColor.setTo(currentFragmentShader.fragmentColor.r,
+                            currentFragmentShader.fragmentColor.g,
+                            currentFragmentShader.fragmentColor.b,
+                            currentFragmentShader.fragmentColor.a);
+                }
 
-                    if (enableFragmentShader) {
-                        currentFragmentShader.fragmentColor = fragmentColor;
-                        shaderFrontColor.setTo(fragmentColor);
-                        shaderBackColor.setTo(fragmentColor);
-                        fragmentPosition.setTo(j, i, - 1);
-                        currentFragmentShader.position = fragmentPosition;
-                        currentFragmentShader.frontColor = shaderFrontColor;
-                        currentFragmentShader.backColor = shaderBackColor;
-                        currentFragmentShader.shade();
-                        fragmentColor.setTo(currentFragmentShader.fragmentColor);
-                    }
+                int drawLength = pixelLength;
+                if (scanRight - j < pixelLength && scanRight != scanLeft) {
+                    drawLength = scanRight - j;
+                }
 
-//                    g2d.setColor(new Color(
-//                                fragmentColor.getR(),
-//                                fragmentColor.getG(),
-//                                fragmentColor.getB()));
+                if ((drawLength != 0 || pixelLength == 1)) {
+                    int x = j > 0 ? j : 0;
+                    int end = (j + drawLength) <= renderableWidth ? j + drawLength : renderableWidth;
 
-                    int drawLength = pixelLength;
-                    if (scanRight - j < pixelLength && scanRight != scanLeft) {
-                        drawLength = scanRight - j;
-                    }
-
-                    if ((drawLength != 0 || pixelLength == 1)) {
-                        int x = j > 0 ? j : 0;
-                        int end = (j + drawLength) <= renderableWidth ? j + drawLength : renderableWidth;
-                        
-                        for (; x < end; ++x) {
-                            int r = (int) (fragmentColor.getR() * 255f);
-                            int g = (int) (fragmentColor.getG() * 255f);
-                            int b = (int) (fragmentColor.getB() * 255f);
-                            renderBufferRaster[i * renderableWidth + x] =
-                                    r << 16 | g << 8 | b;
-                        }
+                    for (; x < end; ++x) {
+                        int r = (int) (fragmentColor.r * 255f);
+                        int g = (int) (fragmentColor.g * 255f);
+                        int b = (int) (fragmentColor.b * 255f);
+                        int a = 255;//(int) (fragmentColor.a * 255f);
+                        renderBufferRaster[scanNumber * renderableWidth + x] =
+                                a << 24 | r << 16 | g << 8 | b;
                     }
                 }
             }
+
         }
     }
 

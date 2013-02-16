@@ -61,29 +61,31 @@ public class Polygon3D {
         ensureCapacity(vertNum);
         for (int i = 0; i < vertNum; i++) {
             vertices[i].setTo(p.vertices[verticeIndexes[i]]);
-            Color4f color = p.colors[verticeIndexes[i]];
-            colors[i].setTo(color);
+            Color4f c = p.colors[verticeIndexes[i]];
+            colors[i].setTo(c.r, c.g, c.b, c.a);
         }
         isClipped = false;
         calcNormal();
         if (copyColorState) {
-            solidColor.setTo(p.getColor(0));
-            if (colors[0].getR() != -1
-                    && colors[0].getG() != -1
-                    && colors[0].getB() != -1) {
+            Color4f c = p.getColor(0);
+            solidColor.setTo(c.r, c.g, c.b, c.a);
+            if (colors[0].r != -1
+                    && colors[0].g != -1
+                    && colors[0].b != -1) {
                 isColored = true;
             } else {
                 isColored = false;
             }
-            if (isColored && colors[1].getR() == -1
-                    && colors[1].getG() == -1
-                    && colors[1].getB() == -1) {
+            if (isColored && colors[1].r == -1
+                    && colors[1].g == -1
+                    && colors[1].b == -1) {
                 isSolidColored = true;
             } else {
                 isSolidColored = false;
             }
         } else {
-            solidColor.setTo(p.getSolidColor());
+            Color4f c = p.getSolidColor();
+            solidColor.setTo(c.r, c.g, c.b, c.a);
             isColored = p.isColored;
             isSolidColored = p.isSolidColored;
         }
